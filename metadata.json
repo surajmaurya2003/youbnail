@@ -1,0 +1,7 @@
+{
+  "name": "Youbnail - AI Youtube Thumbnail Maker",
+  "description": "Professional YouTube thumbnail generator with AI-powered image generation. Features prompt-to-image, reference image guidance, and video screenshot extraction.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
