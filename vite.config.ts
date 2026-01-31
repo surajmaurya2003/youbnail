@@ -30,6 +30,9 @@ export default defineConfig(({ mode }) => {
         include: ['@heroicons/react']
       },
       build: {
+        // Optimized for Cloudflare Pages
+        outDir: 'dist',
+        assetsDir: 'assets',
         // Security: Remove console logs in production
         minify: 'terser',
         terserOptions: {
@@ -41,6 +44,17 @@ export default defineConfig(({ mode }) => {
         },
         // Security: Don't generate source maps in production (prevents code inspection)
         sourcemap: isDev,
+        // Cloudflare Pages optimization
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              vendor: ['react', 'react-dom'],
+              router: ['react-router-dom'],
+              ui: ['framer-motion', '@heroicons/react', 'lucide-react'],
+              supabase: ['@supabase/supabase-js'],
+            },
+          },
+        },
       },
     };
 });

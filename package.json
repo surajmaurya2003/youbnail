@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "cd dist && npx serve -s -l $PORT --no-clipboard"
+    "start": "cd dist && npx serve -s -l $PORT --no-clipboard",
+    "pages:build": "npm run build",
+    "pages:dev": "npm run dev"
   },
   "dependencies": {
     "@google/genai": "^1.34.0",
