@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "start": "cd dist && npx serve -s -l $PORT --no-clipboard",
     "pages:build": "npm run build",
+    "pages:deploy": "npm run build && npx wrangler pages deploy dist --project-name=youbnail",
     "pages:dev": "npm run dev"
   },
   "dependencies": {

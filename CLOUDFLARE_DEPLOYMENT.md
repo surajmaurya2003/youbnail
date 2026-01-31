@@ -25,11 +25,15 @@
 # Build the project
 npm run build
 
-# Install Wrangler CLI
-npm install -g wrangler
+# Deploy to Cloudflare Pages (Option 1)
+npm run pages:deploy
 
-# Deploy to Cloudflare Pages
-wrangler pages publish dist --project-name=youbnail
+# OR Deploy directly with wrangler (Option 2)
+npx wrangler pages deploy dist --project-name=youbnail
+
+# OR Create project first, then deploy (Option 3)
+npx wrangler pages project create youbnail
+npx wrangler pages deploy dist --project-name=youbnail
 ```
 
 ## 🔧 Post-Deployment Setup
