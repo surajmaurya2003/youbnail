@@ -323,20 +323,50 @@ export const thumbnailsService = {
       url: item.public_url,
       prompt: item.prompt,
       timestamp: new Date(item.created_at).getTime(),
+      storage_path: item.storage_path,
     }));
   },
 
-  async deleteThumbnail(thumbnailId: string, storagePath: string) {
-    // Delete from storage
-    await storageService.deleteThumbnail(storagePath);
+  async deleteThumbnail(thumbnailId: string, storagePath?: string) {
+    console.log('Attempting to delete thumbnail:', thumbnailId);
+    
+    // First check if user is authenticated
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+    console.log('Authenticated user:', user.id);
+    
+    // Delete from storage only if storage path exists
+    if (storagePath) {
+      try {
+        await storageService.deleteThumbnail(storagePath);
+      } catch (error) {
+        console.warn('Storage deletion failed:', error);
+        // Continue with database deletion even if storage fails
+      }
+    }
 
-    // Delete from database
-    const { error } = await supabase
+    // Delete from database with explicit user check
+    const { data, error } = await supabase
       .from('thumbnails')
       .delete()
-      .eq('id', thumbnailId);
+      .eq('id', thumbnailId)
+      .eq('user_id', user.id) // Explicitly filter by user_id for extra safety
+      .select(); // Add select to see what was deleted
 
-    if (error) throw error;
+    console.log('Delete result:', { data, error });
+    
+    if (error) {
+      console.error('Database deletion failed:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      throw new Error('No thumbnail found to delete. It may not exist or you may not have permission to delete it.');
+    }
+
+    console.log('Successfully deleted thumbnail:', data);
   },
 };
 

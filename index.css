@@ -27,20 +27,24 @@
 .btn-primary {
   background-color: var(--accent-primary);
   color: white;
-  border: none;
+  border: 1px solid var(--accent-primary);
   border-radius: 0.5rem;
   padding: 0.5rem 1rem;
   font-weight: 600;
-  transition: background-color 0.15s ease, transform 0.1s ease;
+  transition: background-color 0.1s ease, transform 0.1s ease, border-color 0.1s ease;
+  will-change: transform, background-color;
+  transform: translate3d(0, 0, 0);
 }
 
 .btn-primary:hover {
   background-color: #dc2626;
-  transform: translateY(-1px);
+  border-color: #dc2626;
+  transform: translate3d(0, -1px, 0) scale(1.02);
 }
 
 .btn-primary:active {
-  transform: translateY(0);
+  transform: translate3d(0, 0, 0) scale(0.98);
+  transition-duration: 0.05s;
 }
 
 .btn-secondary {
@@ -50,16 +54,20 @@
   border-radius: 0.5rem;
   padding: 0.5rem 1rem;
   font-weight: 500;
-  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  transition: background-color 0.1s ease, color 0.1s ease, transform 0.1s ease, border-color 0.1s ease;
+  will-change: transform, background-color, color;
+  transform: translate3d(0, 0, 0);
 }
 
 .btn-secondary:active {
-  transform: translateY(1px);
+  transform: translate3d(0, 0, 0) scale(0.98);
+  transition-duration: 0.05s;
 }
 
 .btn-secondary:hover {
   background-color: var(--bg-secondary);
   color: var(--text-primary);
+  transform: translate3d(0, -1px, 0) scale(1.02);
 }
 
 .input-field {
@@ -109,8 +117,24 @@
 
 /* Performance optimization for button transitions */
 button[class*="transition"] {
-  will-change: background-color, border-color, color;
-  transform: translateZ(0); /* Force hardware acceleration */
+  will-change: transform, background-color, border-color, color;
+  transform: translate3d(0, 0, 0); /* Force hardware acceleration */
+  backface-visibility: hidden; /* Reduce repaints */
+}
+
+/* Optimize all interactive elements */
+button, [role="button"], a {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Prevent border flash during transitions */
+button {
+  border: 1px solid transparent; /* Always have a border to prevent layout shift */
 }
 
 .nav-pill:hover {

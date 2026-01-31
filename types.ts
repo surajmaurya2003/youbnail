@@ -31,6 +31,7 @@ export interface GeneratedThumbnail {
   url: string;
   prompt: string;
   timestamp: number;
+  storage_path?: string;
 }
 
 export enum CreationMode {

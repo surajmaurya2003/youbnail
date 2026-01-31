@@ -117,6 +117,196 @@ function validateImage(imageData: string): { valid: boolean; error?: string } {
   return { valid: true };
 }
 
+/**
+ * Advanced reference image analysis and prompt building
+ */
+function analyzeReferenceImage(referenceImage: string, prompt: string, selection?: any): string {
+  let analysis = "";
+  
+  if (selection) {
+    // Regional editing with reference
+    analysis = `REGIONAL EDIT TASK:
+1. ANALYZE the reference image to understand the subject, style, pose, lighting, and composition
+2. ONLY MODIFY the selected region at coordinates (x:${Math.round(selection.x)}, y:${Math.round(selection.y)}, size:${Math.round(selection.width)}x${Math.round(selection.height)})
+3. SEAMLESSLY INTEGRATE the reference subject/style into ONLY that selected area
+4. PRESERVE all other areas of the original image completely unchanged
+5. Match lighting, perspective, and scale to fit naturally in the selected region
+
+Task: ${prompt}
+
+CRITICAL: Do NOT change anything outside the selected area. Only modify the specified rectangular region.`;
+  } else {
+    // Full image with reference
+    analysis = `REFERENCE-GUIDED GENERATION:
+1. ANALYZE the reference image for: subject characteristics, pose, lighting, style, composition elements
+2. EXTRACT key visual elements (not text or branding) that should inspire the new thumbnail
+3. CREATE a new YouTube thumbnail that incorporates the visual style and subject essence from the reference
+4. DO NOT copy text, logos, or branding from the reference
+5. FOCUS on pose, lighting style, color palette, and composition approach
+
+Prompt: ${prompt}
+
+Use the reference for visual inspiration and style guidance only.`;
+  }
+  
+  return analysis;
+}
+
+/**
+ * Build sophisticated prompts for different creation modes
+ */
+function buildAdvancedPrompt(
+  prompt: string, 
+  options: any, 
+  selection?: any, 
+  referenceImage?: string,
+  isVertical: boolean = false
+): string {
+  let refinedPrompt = "";
+  
+  // Handle regional editing
+  if (selection) {
+    if (referenceImage) {
+      refinedPrompt = analyzeReferenceImage(referenceImage, prompt, selection);
+    } else {
+      refinedPrompt = `PRECISE REGIONAL EDIT:
+Target area: Rectangle at x:${Math.round(selection.x)}, y:${Math.round(selection.y)} with dimensions ${Math.round(selection.width)}x${Math.round(selection.height)}
+
+INSTRUCTIONS:
+1. ONLY modify the specified rectangular region
+2. Apply this change: ${prompt}
+3. Keep ALL other areas completely unchanged
+4. Ensure seamless blending at the edges
+5. Match existing lighting and perspective
+
+CRITICAL: Do not alter any part of the image outside the selected area.`;
+    }
+  } else {
+    // Full thumbnail generation
+    const platformContext = isVertical ? 'Instagram Reels/YouTube Shorts (vertical mobile viewing)' : 'YouTube (desktop/mobile web viewing)';
+    
+    refinedPrompt = `CREATE a professional, high-CTR ${platformContext} thumbnail:
+
+SUBJECT: ${prompt}
+
+CORE REQUIREMENTS:
+- ${isVertical ? 'Vertical composition (9:16) optimized for mobile' : 'Horizontal composition (16:9) with cinematic quality'}
+- High contrast and vibrant colors for maximum click-through appeal
+- Clear, readable visual hierarchy
+- Professional lighting and composition
+- No text overlays saying "4K", "HD", "Cinematic" or similar technical terms`;
+
+    // Handle reference image for full generation
+    if (referenceImage) {
+      refinedPrompt = analyzeReferenceImage(referenceImage, prompt) + "\n\n" + refinedPrompt;
+    }
+
+    // Add style specifications
+    if (options?.style && options.style !== 'None') {
+      refinedPrompt += `\n\nVISUAL STYLE: ${options.style}`;
+      
+      // Style-specific enhancements
+      switch (options.style.toLowerCase()) {
+        case 'cinematic':
+          refinedPrompt += " - Use dramatic lighting, depth of field, film-like color grading. Avoid adding 'CINEMATIC' or '4K' text to the image.";
+          break;
+        case 'minimalist':
+          refinedPrompt += " - Clean composition, negative space, simple color palette, uncluttered design.";
+          break;
+        case 'dramatic':
+          refinedPrompt += " - High contrast, bold shadows, intense expressions, dynamic composition.";
+          break;
+        case 'bright':
+          refinedPrompt += " - Vibrant colors, high energy, well-lit, cheerful atmosphere.";
+          break;
+        case 'dark':
+          refinedPrompt += " - Moody lighting, deep shadows, atmospheric, mysterious tone.";
+          break;
+        case 'retro':
+          refinedPrompt += " - Vintage aesthetics, retro color grading, nostalgic feel, period-appropriate elements.";
+          break;
+        case 'neon':
+          refinedPrompt += " - Neon lighting effects, cyberpunk aesthetics, electric colors, urban nighttime vibe.";
+          break;
+        case 'professional':
+          refinedPrompt += " - Business-like setting, professional attire, corporate aesthetics, clean presentation.";
+          break;
+      }
+    }
+
+    // Add lighting specifications
+    if (options?.lighting && options.lighting !== 'None') {
+      refinedPrompt += `\n\nLIGHTING: ${options.lighting}`;
+      
+      switch (options.lighting.toLowerCase()) {
+        case 'natural':
+          refinedPrompt += " - Soft, natural daylight, realistic shadows, outdoor or well-lit indoor setting.";
+          break;
+        case 'studio':
+          refinedPrompt += " - Professional studio lighting, even illumination, minimal harsh shadows.";
+          break;
+        case 'dramatic':
+          refinedPrompt += " - Strong directional lighting, pronounced shadows, high contrast between light and dark.";
+          break;
+        case 'soft':
+          refinedPrompt += " - Diffused lighting, gentle shadows, flattering illumination, warm tone.";
+          break;
+        case 'backlit':
+          refinedPrompt += " - Subject lit from behind, rim lighting, silhouette or halo effects.";
+          break;
+        case 'golden hour':
+          refinedPrompt += " - Warm, golden sunlight, long shadows, magical hour lighting quality.";
+          break;
+        case 'neon':
+          refinedPrompt += " - Colorful neon lighting, electric blues/pinks/purples, urban nighttime atmosphere.";
+          break;
+      }
+    }
+
+    // Add emphasis specifications
+    if (options?.emphasis && options.emphasis !== 'None') {
+      refinedPrompt += `\n\nEMPHASIS TECHNIQUE: ${options.emphasis}`;
+      
+      switch (options.emphasis.toLowerCase()) {
+        case 'arrows':
+          refinedPrompt += " - Include subtle directional arrows or pointer elements to guide viewer attention.";
+          break;
+        case 'circles':
+          refinedPrompt += " - Use circular highlights or frames to emphasize important elements.";
+          break;
+        case 'glow':
+          refinedPrompt += " - Apply subtle glow effects around key subjects or objects.";
+          break;
+        case 'zoom':
+          refinedPrompt += " - Create visual zoom or magnification effects on important elements.";
+          break;
+        case 'contrast':
+          refinedPrompt += " - Use high contrast between foreground and background to make subject pop.";
+          break;
+      }
+    }
+
+    // Handle overlay text properly
+    if (options?.overlayText && options.overlayText.trim() !== "") {
+      const sanitizedText = sanitizeInput(options.overlayText);
+      refinedPrompt += `\n\nTEXT OVERLAY: Include this EXACT text in large, bold, readable typography: "${sanitizedText}"
+- Make text highly visible and clickable-looking
+- Use contrasting colors for maximum readability
+- Position text strategically without covering main subject
+- Choose modern, attention-grabbing font style`;
+    }
+
+    refinedPrompt += `\n\nFINAL QUALITY STANDARDS:
+- Optimized for ${platformContext} platform viewing
+- Maximum visual impact for high click-through rates
+- Professional composition and color balance
+- Clear focal point and visual hierarchy
+- No technical watermarks or quality labels in the image`;
+  }
+
+  return refinedPrompt;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -252,32 +442,34 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { 
-      prompt, 
-      referenceImage, 
-      options,
-      selection 
-    } = requestBody;
+    console.log('Request body:', { 
+      prompt: requestBody.prompt?.substring(0, 100) + '...', 
+      hasReferenceImage: !!requestBody.referenceImage,
+      hasSelection: !!requestBody.selection,
+      options: requestBody.options
+    });
 
     // Validate required fields
-    if (!prompt && !referenceImage) {
+    if (!requestBody.prompt || typeof requestBody.prompt !== 'string') {
       return new Response(
-        JSON.stringify({ error: 'Missing required field: prompt or referenceImage' }),
+        JSON.stringify({ error: 'Missing or invalid prompt field' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate and sanitize prompt
-    if (prompt) {
-      const sanitizedPrompt = sanitizeInput(prompt);
-      if (sanitizedPrompt.length === 0) {
-        return new Response(
-          JSON.stringify({ error: 'Prompt cannot be empty after sanitization' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      requestBody.prompt = sanitizedPrompt;
+    // Sanitize and validate prompt
+    const prompt = sanitizeInput(requestBody.prompt);
+    if (!prompt) {
+      return new Response(
+        JSON.stringify({ error: 'Prompt cannot be empty after sanitization' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    // Extract optional fields
+    const referenceImage = requestBody.referenceImage;
+    const selection = requestBody.selection;
+    const options = requestBody.options || {};
 
     // Validate reference image if provided
     if (referenceImage) {
@@ -299,36 +491,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Build refined prompt
-    let refinedPrompt = "";
-    
-    if (selection) {
-      refinedPrompt = `In the selected region (approximately at x:${Math.round(selection.x)} y:${Math.round(selection.y)} with size ${Math.round(selection.width)}x${Math.round(selection.height)}), perform the following change: ${requestBody.prompt}. Keep the rest of the image exactly as it is.`;
-    } else {
-      refinedPrompt = `Create a professional, high-CTR YouTube thumbnail. Subject: ${requestBody.prompt}.`;
-      
-      if (options?.overlayText && options.overlayText.trim() !== "") {
-        const sanitizedText = sanitizeInput(options.overlayText);
-        refinedPrompt += ` Include the following large, readable, eye-catching text: "${sanitizedText}". Use bold, modern typography.`;
-      }
-      
-      if (options?.style && options.style !== 'None') {
-        refinedPrompt += ` Aesthetic Style: ${options.style}.`;
-      }
-      
-      if (options?.lighting && options.lighting !== 'None') {
-        refinedPrompt += ` Lighting: ${options.lighting}.`;
-      }
-      
-      if (options?.emphasis && options.emphasis !== 'None') {
-        refinedPrompt += ` Emphasis: ${options.emphasis}.`;
-      }
-    }
-
+    // Build sophisticated prompt using the new system
     const isVertical = aspectRatio === '9:16';
-    const platformName = isVertical ? 'Instagram Reels/YouTube Shorts' : 'YouTube';
-    
-    refinedPrompt += ` Aspect ratio is ${aspectRatio}. This is for ${platformName} content. Use vibrant colors, high contrast, and ensure the main subject stands out. ${isVertical ? 'Optimize for vertical mobile viewing with the main subject centered vertically.' : 'Cinematic 4k quality.'}`;
+    const refinedPrompt = buildAdvancedPrompt(
+      prompt,
+      options,
+      selection,
+      referenceImage,
+      isVertical
+    );
+
+    console.log('Generated sophisticated prompt:', refinedPrompt.substring(0, 200) + '...');
 
     // Call Gemini API directly (more reliable for Edge Functions)
     const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${geminiApiKey}`;

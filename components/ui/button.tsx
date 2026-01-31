@@ -5,19 +5,19 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-all outline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-primary)]/70 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 relative overflow-hidden",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium will-change-transform transform-gpu outline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-primary)]/70 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 relative overflow-hidden transition-[background-color,border-color,color,transform,box-shadow] duration-150 ease-out",
   {
     variants: {
       variant: {
-        default: "text-white border border-[rgba(239,68,68,0.3)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.3),0_0_15px_rgba(239,68,68,0.1)] hover:-translate-y-0.5 hover:border-[rgba(239,68,68,0.5)] font-semibold",
+        default: "text-white bg-[#ef4444] border-[#ef4444] hover:bg-[#dc2626] hover:shadow-[0_4px_12px_rgba(239,68,68,0.3)] hover:scale-[1.02] font-semibold active:scale-[0.98] active:duration-75",
         destructive:
-          "text-white border border-[rgba(239,68,68,0.3)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.3),0_0_15px_rgba(239,68,68,0.1)] hover:-translate-y-0.5 hover:border-[rgba(239,68,68,0.5)] font-semibold",
+          "text-white bg-[#ef4444] border-[#ef4444] hover:bg-[#dc2626] hover:shadow-[0_4px_12px_rgba(239,68,68,0.3)] hover:scale-[1.02] font-semibold active:scale-[0.98] active:duration-75",
         outline:
-          "border border-[var(--border-primary)] bg-[var(--bg-card)] text-[var(--text-primary)] shadow-[var(--shadow-sm)] hover:bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] hover:shadow-[var(--shadow-md),0_0_20px_rgba(239,68,68,0.2)] hover:-translate-y-0.5 font-semibold backdrop-blur-sm",
+          "border border-[#4b5563] bg-[#000000] text-[#ffffff] hover:bg-[#1a1a1a] hover:border-[#ef4444] hover:text-[#ef4444] hover:scale-[1.02] font-semibold backdrop-blur-sm active:scale-[0.98] active:duration-75",
         secondary:
-          "bg-[var(--bg-card)] text-[var(--text-primary)] border border-[var(--border-primary)] shadow-[var(--shadow-sm)] hover:bg-[rgba(239,68,68,0.1)] hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] hover:shadow-[var(--shadow-md),0_0_20px_rgba(239,68,68,0.2)] hover:-translate-y-0.5 font-semibold backdrop-blur-sm",
-        ghost: "hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] text-[var(--text-secondary)]",
-        link: "text-[var(--accent-primary)] underline-offset-4 hover:underline",
+          "bg-[#000000] text-[#ffffff] border border-[#4b5563] hover:bg-[#1a1a1a] hover:border-[#ef4444] hover:text-[#ef4444] hover:scale-[1.02] font-semibold backdrop-blur-sm active:scale-[0.98] active:duration-75",
+        ghost: "hover:bg-[#1a1a1a] hover:text-[#ffffff] text-[#d1d5db] hover:scale-[1.02] active:scale-[0.98] active:duration-75",
+        link: "text-[#ef4444] underline-offset-4 hover:underline hover:scale-[1.02] active:scale-[0.98] active:duration-75",
       },
       size: {
         default: "h-9 px-4 py-2",

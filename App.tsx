@@ -118,6 +118,8 @@ const AppWithToast: React.FC = () => {
   const [isGoogleLinked, setIsGoogleLinked] = useState(false);
   const [lastGenerateTime, setLastGenerateTime] = useState<number>(0);
   const [isRateLimited, setIsRateLimited] = useState(false);
+  const [shareModalUrl, setShareModalUrl] = useState<string>('');
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   
   // Track the current user ID to prevent resetting edit fields unnecessarily
   const currentUserIdRef = useRef<string | null>(null);
@@ -619,20 +621,39 @@ const AppWithToast: React.FC = () => {
     }
   };
 
-  const handleShare = async (imageUrl: string) => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Check out my new YouTube Thumbnail!',
-          text: 'Generated with Youbnail - AI Youtube Thumbnail Maker',
-          url: window.location.href,
-        });
-      } catch (err) { /* Silent error handling */ }
-    } else {
-      try {
-        await navigator.clipboard.writeText(imageUrl);
-        alert('Image link copied!');
-      } catch (err) { alert('Sharing not supported.'); }
+  const handleShare = (imageUrl: string) => {
+    setShareModalUrl(imageUrl);
+    setIsShareModalOpen(true);
+  };
+
+  const handleCopyLink = async (imageUrl: string) => {
+    try {
+      await navigator.clipboard.writeText(imageUrl);
+      showSuccess('Link copied to clipboard!');
+    } catch (err) {
+      // Fallback for browsers that don't support clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = imageUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      showSuccess('Link copied to clipboard!');
+    }
+  };
+
+  const handleDeleteThumbnail = async (thumbnailId: string, storagePath?: string) => {
+    try {
+      // Delete from Supabase (storage if available, always from database)
+      await thumbnailsService.deleteThumbnail(thumbnailId, storagePath);
+      
+      // Update local state
+      setHistory(prev => prev.filter(item => item.id !== thumbnailId));
+      
+      showSuccess('Thumbnail deleted successfully');
+    } catch (error: any) {
+      console.error('Failed to delete thumbnail:', error);
+      showError('Failed to delete thumbnail: ' + (error.message || 'Unknown error'));
     }
   };
 
@@ -1404,8 +1425,8 @@ const AppWithToast: React.FC = () => {
                       onClick={handleVideoFormatClick}
                       className={`px-4 py-4 rounded-xl border-2 transition-colors duration-150 font-medium text-sm ${
                         options.aspectRatio === '16:9' 
-                          ? 'border-red-400 bg-red-500 text-white shadow-lg shadow-red-500/30' 
-                          : 'border-red-800 bg-red-950 text-red-300 hover:border-red-700 hover:bg-red-900'
+                          ? 'border-[#ef4444] bg-[#ef4444] text-white shadow-lg shadow-[#ef4444]/30' 
+                          : 'border-[#7f1d1d] bg-[#450a0a] text-[#fca5a5] hover:border-[#991b1b] hover:bg-[#7f1d1d]'
                       }`}
                     >
                       📺 16:9 (Video)
@@ -1414,8 +1435,8 @@ const AppWithToast: React.FC = () => {
                       onClick={handleReelsFormatClick}
                       className={`px-4 py-4 rounded-xl border-2 transition-colors duration-150 font-medium text-sm ${
                         options.aspectRatio === '9:16' 
-                          ? 'border-red-500 bg-red-600 text-white shadow-lg shadow-red-600/30' 
-                          : 'border-red-800 bg-red-950 text-red-300 hover:border-red-700 hover:bg-red-900'
+                          ? 'border-[#ef4444] bg-[#ef4444] text-white shadow-lg shadow-[#ef4444]/30' 
+                          : 'border-[#7f1d1d] bg-[#450a0a] text-[#fca5a5] hover:border-[#991b1b] hover:bg-[#7f1d1d]'
                       }`}
                     >
                       📱 9:16 (Reels)
@@ -1429,7 +1450,7 @@ const AppWithToast: React.FC = () => {
                   <button
                     onClick={() => handleGenerate(false)}
                     disabled={isGenerating || isEditMode || isRateLimited}
-                    className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold py-4 text-base rounded-xl transition-colors disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                    className="w-full bg-[#ef4444] hover:bg-[#dc2626] disabled:bg-[#7f1d1d] text-white font-semibold py-4 text-base rounded-xl transition-colors disabled:cursor-not-allowed flex items-center justify-center gap-3"
                   >
                     {isGenerating ? (
                       <>
@@ -1512,12 +1533,12 @@ const AppWithToast: React.FC = () => {
                   ) : isGenerating ? (
                     <div className="text-center py-16 w-full max-w-md mx-auto">
                       <div className="mb-6">
-                        <div className="w-full h-3 rounded-full overflow-hidden" style={{background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)'}}>
+                        <div className="w-full h-3 rounded-full overflow-hidden" style={{background: '#1a1a1a', border: '1px solid #4b5563'}}>
                           <div 
                             className="h-full rounded-full transition-all duration-300 ease-out relative overflow-hidden"
                             style={{
                               width: `${generationProgress}%`,
-                              background: 'linear-gradient(90deg, var(--accent-primary), #dc2626)',
+                              background: '#ef4444',
                               boxShadow: '0 0 10px rgba(239, 68, 68, 0.5)'
                             }}
                           >
@@ -1563,20 +1584,25 @@ const AppWithToast: React.FC = () => {
                             type="text" 
                             value={editPrompt}
                             onChange={handleEditPromptChange}
-                            placeholder="Change in this area..." 
+                            placeholder="Describe the change for this selected area..." 
                             className="input-field" 
                             autoFocus 
                           />
                           <div className="flex gap-3">
                             <button 
-                              onClick={() => { setIsEditMode(false); setSelectedArea(null); setEditPrompt(''); }} 
+                              onClick={() => { 
+                                setIsEditMode(false); 
+                                setSelectedArea(null); 
+                                setEditPrompt('');
+                              }} 
                               className="btn-secondary"
                             >
                               Cancel
                             </button>
                             <button 
                               onClick={() => handleGenerate(true)} 
-                              className="btn-primary flex-1"
+                              disabled={!editPrompt.trim()}
+                              className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               Execute Update
                             </button>
@@ -1784,6 +1810,24 @@ const AppWithToast: React.FC = () => {
                          >
                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                           </svg>
+                         </button>
+                         <button
+                           onClick={() => {
+                             showConfirm(
+                               'Delete Thumbnail',
+                               'Are you sure you want to delete this thumbnail? This action cannot be undone.',
+                               () => handleDeleteThumbnail(item.id, item.storage_path),
+                               'danger',
+                               'Delete',
+                               'Cancel'
+                             );
+                           }}
+                           className="p-3 bg-red-500/20 backdrop-blur-sm rounded-xl text-white hover:bg-red-500/40 transition-colors"
+                           title="Delete thumbnail"
+                         >
+                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                            </svg>
                          </button>
                       </div>
@@ -2034,25 +2078,25 @@ const AppWithToast: React.FC = () => {
 
         {activeTab === 'usage' && (
           <div className="max-w-5xl mx-auto space-y-8">
-            <div className="flex items-center justify-between">
-              <h2 className="text-3xl font-bold" style={{color: 'var(--text-primary)'}}>Usage History</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <h2 className="text-2xl sm:text-3xl font-bold" style={{color: 'var(--text-primary)'}}>Usage History</h2>
               <div className="flex items-center gap-4">
-                <div className="text-right">
+                <div className="text-center sm:text-right">
                   <div className="text-xs font-medium" style={{color: 'var(--text-muted)'}}>Total Used</div>
-                  <div className="text-xl font-bold" style={{color: 'var(--accent-primary)'}}>
+                  <div className="text-lg sm:text-xl font-bold" style={{color: 'var(--accent-primary)'}}>
                     {usageHistory.reduce((sum, record) => sum + record.credits, 0)} credits
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-center sm:text-right">
                   <div className="text-xs font-medium" style={{color: 'var(--text-muted)'}}>Remaining</div>
-                  <div className="text-xl font-bold" style={{color: 'var(--text-primary)'}}>
+                  <div className="text-lg sm:text-xl font-bold" style={{color: 'var(--text-primary)'}}>
                     {user.credits} credits
                   </div>
                 </div>
               </div>
             </div>
             
-            <div className="card p-6">
+            <div className="card p-4 sm:p-6">
               {isLoadingUsage ? (
                 <UsageTableSkeleton />
               ) : usageHistory.length === 0 ? (
@@ -2068,44 +2112,120 @@ const AppWithToast: React.FC = () => {
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr style={{borderBottom: '1px solid var(--border-primary)'}}>
-                        <th className="text-left py-3 px-2 font-semibold" style={{color: 'var(--text-secondary)'}}>Date & Time</th>
-                        <th className="text-left py-3 px-2 font-semibold" style={{color: 'var(--text-secondary)'}}>Type</th>
-                        <th className="text-left py-3 px-2 font-semibold" style={{color: 'var(--text-secondary)'}}>Mode</th>
-                        <th className="text-left py-3 px-2 font-semibold" style={{color: 'var(--text-secondary)'}}>Format</th>
-                        <th className="text-left py-3 px-2 font-semibold" style={{color: 'var(--text-secondary)'}}>Credits</th>
-                        <th className="text-left py-3 px-2 font-semibold" style={{color: 'var(--text-secondary)'}}>Details</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {usageHistory.map((record) => {
-                        const date = new Date(record.timestamp);
-                        const formattedDate = date.toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric', 
-                          year: 'numeric' 
-                        });
-                        const formattedTime = date.toLocaleTimeString('en-US', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        });
-                        
-                        return (
-                          <tr 
-                            key={record.id} 
-                            style={{borderBottom: '1px solid var(--border-primary)'}}
-                            className="hover:bg-opacity-50"
-                          >
-                            <td className="py-3 px-2" style={{color: 'var(--text-primary)'}}>
-                              <div className="font-medium">{formattedDate}</div>
-                              <div className="text-xs" style={{color: 'var(--text-muted)'}}>{formattedTime}</div>
-                            </td>
-                            <td className="py-3 px-2">
+                <>
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr style={{borderBottom: '1px solid var(--border-primary)'}}>
+                          <th className="text-left py-3 px-2 font-semibold" style={{color: 'var(--text-secondary)'}}>Date & Time</th>
+                          <th className="text-left py-3 px-2 font-semibold" style={{color: 'var(--text-secondary)'}}>Type</th>
+                          <th className="text-left py-3 px-2 font-semibold" style={{color: 'var(--text-secondary)'}}>Mode</th>
+                          <th className="text-left py-3 px-2 font-semibold" style={{color: 'var(--text-secondary)'}}>Format</th>
+                          <th className="text-left py-3 px-2 font-semibold" style={{color: 'var(--text-secondary)'}}>Credits</th>
+                          <th className="text-left py-3 px-2 font-semibold" style={{color: 'var(--text-secondary)'}}>Details</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {usageHistory.map((record) => {
+                          const date = new Date(record.timestamp);
+                          const formattedDate = date.toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          });
+                          const formattedTime = date.toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          });
+                          
+                          return (
+                            <tr 
+                              key={record.id} 
+                              style={{borderBottom: '1px solid var(--border-primary)'}}
+                              className="hover:bg-opacity-50"
+                            >
+                              <td className="py-3 px-2" style={{color: 'var(--text-primary)'}}>
+                                <div className="font-medium">{formattedDate}</div>
+                                <div className="text-xs" style={{color: 'var(--text-muted)'}}>{formattedTime}</div>
+                              </td>
+                              <td className="py-3 px-2">
+                                <span 
+                                  className="px-2 py-1 rounded-full text-xs font-medium"
+                                  style={{
+                                    background: record.type === 'edit' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                                    color: record.type === 'edit' ? 'var(--accent-primary)' : 'var(--accent-success)'
+                                  }}
+                                >
+                                  {record.type === 'edit' ? 'Edit' : 'Generate'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-2" style={{color: 'var(--text-primary)'}}>
+                                {record.mode === CreationMode.PROMPT ? 'Prompt' : 
+                                 record.mode === CreationMode.REFERENCE ? 'Reference' : 'Video'}
+                              </td>
+                              <td className="py-3 px-2" style={{color: 'var(--text-primary)'}}>
+                                {record.aspectRatio}
+                              </td>
+                              <td className="py-3 px-2">
+                                <span className="font-semibold" style={{color: 'var(--accent-primary)'}}>
+                                  -{record.credits}
+                                </span>
+                              </td>
+                              <td className="py-3 px-2" style={{color: 'var(--text-secondary)'}}>
+                                <div className="max-w-xs truncate text-xs">
+                                  {record.prompt || 'N/A'}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Card View */}
+                  <div className="md:hidden space-y-3">
+                    {usageHistory.map((record) => {
+                      const date = new Date(record.timestamp);
+                      const formattedDate = date.toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                      });
+                      const formattedTime = date.toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      });
+                      
+                      return (
+                        <div 
+                          key={record.id} 
+                          className="p-4 rounded-lg border"
+                          style={{
+                            backgroundColor: 'var(--bg-tertiary)',
+                            borderColor: 'var(--border-primary)'
+                          }}
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <div className="font-medium text-sm" style={{color: 'var(--text-primary)'}}>
+                                {formattedDate}
+                              </div>
+                              <div className="text-xs" style={{color: 'var(--text-muted)'}}>
+                                {formattedTime}
+                              </div>
+                            </div>
+                            <span className="font-semibold text-sm" style={{color: 'var(--accent-primary)'}}>
+                              -{record.credits} credits
+                            </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                              <div className="text-xs font-medium mb-1" style={{color: 'var(--text-muted)'}}>Type</div>
                               <span 
-                                className="px-2 py-1 rounded-full text-xs font-medium"
+                                className="px-2 py-1 rounded-full text-xs font-medium inline-block"
                                 style={{
                                   background: record.type === 'edit' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
                                   color: record.type === 'edit' ? 'var(--accent-primary)' : 'var(--accent-success)'
@@ -2113,30 +2233,36 @@ const AppWithToast: React.FC = () => {
                               >
                                 {record.type === 'edit' ? 'Edit' : 'Generate'}
                               </span>
-                            </td>
-                            <td className="py-3 px-2" style={{color: 'var(--text-primary)'}}>
+                            </div>
+                            <div>
+                              <div className="text-xs font-medium mb-1" style={{color: 'var(--text-muted)'}}>Format</div>
+                              <div className="text-sm" style={{color: 'var(--text-primary)'}}>
+                                {record.aspectRatio}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="mb-3">
+                            <div className="text-xs font-medium mb-1" style={{color: 'var(--text-muted)'}}>Mode</div>
+                            <div className="text-sm" style={{color: 'var(--text-primary)'}}>
                               {record.mode === CreationMode.PROMPT ? 'Prompt' : 
                                record.mode === CreationMode.REFERENCE ? 'Reference' : 'Video'}
-                            </td>
-                            <td className="py-3 px-2" style={{color: 'var(--text-primary)'}}>
-                              {record.aspectRatio}
-                            </td>
-                            <td className="py-3 px-2">
-                              <span className="font-semibold" style={{color: 'var(--accent-primary)'}}>
-                                -{record.credits}
-                              </span>
-                            </td>
-                            <td className="py-3 px-2" style={{color: 'var(--text-secondary)'}}>
-                              <div className="max-w-xs truncate text-xs">
-                                {record.prompt || 'N/A'}
+                            </div>
+                          </div>
+                          
+                          {record.prompt && (
+                            <div>
+                              <div className="text-xs font-medium mb-1" style={{color: 'var(--text-muted)'}}>Details</div>
+                              <div className="text-sm break-words" style={{color: 'var(--text-secondary)'}}>
+                                {record.prompt}
                               </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -2381,6 +2507,131 @@ const AppWithToast: React.FC = () => {
           confirmText={confirmModal.confirmText}
           cancelText={confirmModal.cancelText}
         />
+        
+        {/* Custom Share Modal */}
+        <div className={`fixed inset-0 z-50 flex items-center justify-center ${isShareModalOpen ? '' : 'hidden'}`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}>
+          <div 
+            className="w-full mx-4 max-w-sm rounded-lg shadow-lg p-6"
+            style={{backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-primary)'}}
+          >
+            <div className="space-y-4">
+              <div className="text-center">
+                <h3 className="text-lg font-medium text-white mb-2">Share Thumbnail</h3>
+                <p className="text-sm" style={{color: 'var(--text-secondary)'}}>Choose how you want to share your thumbnail</p>
+              </div>
+              
+              <div className="space-y-3">
+                <button
+                  onClick={async () => {
+                    await handleCopyLink(shareModalUrl);
+                    setIsShareModalOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-white border"
+                  style={{
+                    backgroundColor: 'var(--bg-tertiary)', 
+                    borderColor: 'var(--border-primary)',
+                    ':hover': { backgroundColor: 'var(--bg-secondary)' }
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--bg-secondary)'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--bg-tertiary)'}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <span>Copy Link</span>
+                </button>
+                
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await fetch(shareModalUrl);
+                      const blob = await response.blob();
+                      const file = new File([blob], 'thumbnail.png', { type: 'image/png' });
+                      
+                      if (navigator.share && navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                          title: 'Check out my YouTube Thumbnail!',
+                          text: 'Generated with Youbnail - AI YouTube Thumbnail Maker',
+                          files: [file]
+                        });
+                      } else {
+                        // Fallback to downloading
+                        const blobUrl = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = blobUrl;
+                        link.download = `youbnail-thumbnail-${Date.now()}.png`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(blobUrl);
+                        showSuccess('Thumbnail downloaded!');
+                      }
+                      setIsShareModalOpen(false);
+                    } catch (error) {
+                      showError('Failed to share thumbnail');
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-white border"
+                  style={{
+                    backgroundColor: 'var(--bg-tertiary)', 
+                    borderColor: 'var(--border-primary)',
+                    ':hover': { backgroundColor: 'var(--bg-secondary)' }
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--bg-secondary)'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--bg-tertiary)'}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                  <span>Share File</span>
+                </button>
+                
+                <button
+                  onClick={() => {
+                    const text = `Check out this amazing YouTube thumbnail I created with Youbnail! ${shareModalUrl}`;
+                    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+                    window.open(url, '_blank');
+                    setIsShareModalOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-white border"
+                  style={{
+                    backgroundColor: 'var(--accent-primary)', 
+                    borderColor: 'var(--accent-primary)',
+                    ':hover': { backgroundColor: 'var(--accent-hover)' }
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--accent-hover)'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--accent-primary)'}
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                  </svg>
+                  <span>Share on Twitter</span>
+                </button>
+              </div>
+              
+              <button
+                onClick={() => setIsShareModalOpen(false)}
+                className="w-full p-3 rounded-lg transition-colors border"
+                style={{
+                  backgroundColor: 'var(--bg-tertiary)',
+                  color: 'var(--text-secondary)',
+                  borderColor: 'var(--border-primary)',
+                  ':hover': { backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = 'var(--bg-secondary)';
+                  e.target.style.color = 'var(--text-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'var(--bg-tertiary)';
+                  e.target.style.color = 'var(--text-secondary)';
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       </>
     );
   }
