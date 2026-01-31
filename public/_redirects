@@ -1,10 +1,5 @@
 # Cloudflare Pages Redirects
-# Handle SPA routing - redirect all routes to index.html
-
-/*    /index.html   200
-
-# API routes should go to Supabase (not handled by Cloudflare Pages)
-/api/*  https://your-supabase-project.supabase.co/functions/v1/:splat  200
+# Handle SPA routing - redirect all non-existing files to index.html
 
 # Handle common routes explicitly for better SEO
 /login    /index.html   200
@@ -13,3 +8,6 @@
 /privacy  /index.html   200
 /terms    /index.html   200
 /refund   /index.html   200
+
+# SPA fallback - must be last rule
+/*    /index.html   200
