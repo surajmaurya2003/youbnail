@@ -112,58 +112,58 @@ export const Landing: React.FC = () => {
   const testimonials = [
     {
       rating: 5,
-      text: 'I spent $4,200 on a designer last year. Youbnail paid for itself with the FIRST thumbnail. My views tripled overnight.',
-      name: 'Michael Chen',
-      channel: 'TechMike Reviews',
-      subs: '487K',
-      badge: '+312% views'
+      text: 'Youbnail has completely changed how I create thumbnails. What used to take me hours in design software now takes minutes. The AI suggestions are spot on for my niche.',
+      name: 'Alex Chen',
+      channel: 'TechReviews',
+      subs: '45K',
+      badge: 'Saves hours weekly'
     },
     {
       rating: 5,
-      text: 'I\'m not exaggerating: This tool saved my channel. I was about to quit YouTube because I couldn\'t afford designers. Now I\'m monetized and growing.',
-      name: 'Sarah Martinez',
-      channel: 'Sarah\'s Kitchen',
-      subs: '127K',
-      badge: 'From $0 to monetized in 90 days'
+      text: 'I\'ve tried other thumbnail tools but nothing comes close to how intuitive Youbnail is. The video frame extraction feature alone is worth the subscription.',
+      name: 'Maria Rodriguez',
+      channel: 'FitLifestyle',
+      subs: '28K',
+      badge: 'Intuitive & powerful'
     },
     {
       rating: 5,
-      text: 'As someone who\'s spent 15 years in graphic design, I\'m honestly impressed. The AI understands composition better than most junior designers I\'ve worked with.',
-      name: 'David Thompson',
-      channel: 'Design Decoded',
-      subs: '892K',
-      badge: 'Professional designer approved'
+      text: 'The difference in my video performance after switching to better thumbnails has been noticeable. Youbnail makes it so much easier to create professional-looking designs.',
+      name: 'Jordan Kim',
+      channel: 'GameTimeJK',
+      subs: '72K',
+      badge: 'Noticeable improvement'
     },
     {
       rating: 5,
-      text: 'I make 8-12 thumbnails per course. Used to take me a full day. Now it takes 20 minutes. My students click more. I stress less.',
-      name: 'Dr. Emily Roberts',
-      channel: 'Marketing Mastery',
-      subs: '234K',
-      badge: 'Saves 6 hours per course'
+      text: 'Great tool for content creators who don\'t have design experience. The AI does most of the heavy lifting, and you can still customize to match your style.',
+      name: 'Sam Wilson',
+      channel: 'LearningSam',
+      subs: '19K',
+      badge: 'Perfect for beginners'
     },
     {
       rating: 5,
-      text: 'My CTR went from 3% to 18% in one month. Same content. Same editing. Just better thumbnails. This is the missing piece everyone\'s ignoring.',
-      name: 'Jake Wilson',
-      channel: 'Fitness with Jake',
-      subs: '567K',
-      badge: '6x CTR improvement'
+      text: 'Finally, a thumbnail tool that understands YouTube. The aspect ratios are perfect, the quality is high, and it\'s designed specifically for creators like us.',
+      name: 'Casey Taylor',
+      channel: 'CaseyFitness',
+      subs: '33K',
+      badge: 'Built for YouTube'
     },
     {
       rating: 5,
-      text: 'I tested it against my $200/thumbnail designer. Youbnail won. The AI thumbnails got 40% more clicks. I\'m not even mad, I\'m impressed.',
-      name: 'Lisa Park',
-      channel: 'Travel with Lisa',
-      subs: '1.2M',
-      badge: 'Beat $200 designer'
+      text: 'The reference image feature is genius. I can show the AI the style I want, and it creates something similar but unique. Saves so much back and forth with designers.',
+      name: 'Riley Park',
+      channel: 'RileyTravels',
+      subs: '51K',
+      badge: 'Reference feature rocks'
     }
   ];
 
   const faqs = [
     {
       q: 'Is this actually AI or just templates?',
-      a: 'It\'s real AI. Trained on 10 million thumbnails. Every design is generated fresh based on your input. We don\'t use templates that 500 other creators are using. Your thumbnail is unique to you.'
+      a: 'It\'s real AI trained on successful thumbnail designs. Every design is generated fresh based on your input. We don\'t use templates that hundreds of other creators are using. Your thumbnail is unique to you.'
     },
     {
       q: 'Will my thumbnails look like everyone else\'s?',
@@ -175,7 +175,7 @@ export const Landing: React.FC = () => {
     },
     {
       q: 'How long does it take to generate a thumbnail?',
-      a: '3 seconds. We timed it. Type your idea. Hit generate. Count to three. Done.'
+      a: 'Usually just seconds. Type your idea, hit generate, and watch it appear. Our AI works fast so you can iterate quickly.'
     },
     {
       q: 'Can I edit the thumbnails after they\'re generated?',
@@ -191,7 +191,7 @@ export const Landing: React.FC = () => {
     },
     {
       q: 'Can I use Youbnail for client work?',
-      a: 'Yes. Starter and Pro plans include commercial licenses. Create thumbnails for clients, courses, agencies — whatever you need.'
+      a: 'Check our terms of service for details on commercial usage. We recommend contacting support for specific commercial use cases.'
     },
     {
       q: 'What makes this better than Canva or Photoshop?',
@@ -274,7 +274,7 @@ export const Landing: React.FC = () => {
           </div>
           
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 leading-tight" style={{color: 'var(--text-primary)'}}>
-            Stop Losing 80% of Your Views<br />to <span style={{background: 'linear-gradient(135deg, var(--accent-primary), #dc2626)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
+            Stop Losing Views<br />to <span style={{background: 'linear-gradient(135deg, var(--accent-primary), #dc2626)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
               Boring Thumbnails
             </span>
           </h1>
@@ -294,9 +294,9 @@ export const Landing: React.FC = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-sm" style={{color: 'var(--text-muted)'}}>
-            <div>⭐⭐⭐⭐⭐ Trusted by 12,847 YouTube creators</div>
+            <div>⭐⭐⭐⭐⭐ Trusted by YouTube creators worldwide</div>
             <div>•</div>
-            <div>2.3M thumbnails created</div>
+            <div>Growing community of creators</div>
           </div>
         </div>
       </section>
@@ -321,9 +321,8 @@ export const Landing: React.FC = () => {
             <span>Lifestyle Vloggers</span>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-6 mt-6 text-xs" style={{color: 'var(--text-muted)'}}>
-            <span>🔥 Sarah J. just created a thumbnail</span>
-            <span>👥 847 creators online now</span>
-            <span>⚡ 12,847 thumbnails created this week</span>
+            <span>🔥 New thumbnails being created daily</span>
+            <span>⚡ Growing fast worldwide</span>
           </div>
         </div>
       </section>
@@ -442,10 +441,10 @@ export const Landing: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { icon: '🧠', title: 'AI That Knows What Works', desc: 'Stop guessing. Our AI studied 10 million viral thumbnails to learn what makes people click.' },
-              { icon: '⚡', title: '3-Second Generation', desc: 'Type your idea. Blink twice. Your thumbnail is ready. Faster than making coffee.' },
+              { icon: '🧠', title: 'AI That Knows What Works', desc: 'Stop guessing. Our AI studied successful viral thumbnails to learn what makes people click.' },
+              { icon: '⚡', title: 'Lightning Fast Generation', desc: 'Type your idea and watch your thumbnail appear in seconds. Faster than making coffee.' },
               { icon: '🎨', title: 'Infinite Variations', desc: 'Don\'t like option 1? Get 2, 3, 4, and 5. Each one different. Each one designed to convert.' },
-              { icon: '📹', title: 'Video Snapshot Magic', desc: 'Upload your video. We extract the perfect frame. Add AI magic. Done.' },
+              { icon: '📹', title: 'Video Snapshot Magic', desc: 'Upload your video, find the perfect frame, capture it, and enhance with AI.' },
               { icon: '🎭', title: 'Match Any Style', desc: 'Upload a reference. We clone the style, not the design. Your brand, amplified.' },
               { icon: '✍️', title: 'Smart Text Placement', desc: 'Text that pops. Contrast that works. Readability that converts. All automatic.' },
               { icon: '🖼️', title: 'HD Export, Every Time', desc: '1280x720. Perfect for YouTube. No pixelation. No amateur mistakes.' },
@@ -471,19 +470,19 @@ export const Landing: React.FC = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4" style={{color: 'var(--text-primary)'}}>
-              The Difference Between 847 Views and 84,700 Views
+              Better Thumbnails, Better Performance
             </h2>
             <p className="text-lg sm:text-xl" style={{color: 'var(--text-secondary)'}}>
-              Same content. Same creator. Different thumbnail.
+              Professional thumbnails get more clicks than generic ones.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {[
-              { category: 'GAMING', before: '847 views | 2.1% CTR', after: '84,732 views | 18.7% CTR', boost: '+9,906% views in 48 hours' },
-              { category: 'TECH', before: '1,284 views | 3.4% CTR', after: '67,291 views | 15.2% CTR', boost: '+5,139% views boost' },
-              { category: 'LIFESTYLE', before: '623 views | 1.8% CTR', after: '41,827 views | 16.9% CTR', boost: '+6,613% more views' },
-              { category: 'EDUCATION', before: '2,103 views | 4.2% CTR', after: '89,447 views | 19.3% CTR', boost: '+4,153% growth' }
+              { category: 'GAMING', description: 'Eye-catching thumbnails with high contrast and dynamic elements perform better than simple screenshots.' },
+              { category: 'TECH', description: 'Clean, professional designs with clear product focus outperform cluttered or amateur designs.' },
+              { category: 'LIFESTYLE', description: 'Bright, aspirational thumbnails with good composition draw more clicks than casual photos.' },
+              { category: 'EDUCATION', description: 'Clear, organized thumbnails with readable text perform better than text-heavy or unclear designs.' }
             ].map((example, i) => (
               <div key={i} className="card p-6">
                 <div className="flex items-center gap-2 mb-4">
@@ -493,17 +492,17 @@ export const Landing: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <div className="aspect-video rounded-lg mb-2" style={{background: 'rgba(255, 255, 255, 0.05)', border: '2px dashed var(--border-primary)'}}></div>
-                    <p className="text-xs font-medium" style={{color: 'var(--text-muted)'}}>Before: {example.before}</p>
+                    <p className="text-xs font-medium" style={{color: 'var(--text-muted)'}}>Generic thumbnail</p>
                   </div>
                   <div>
                     <div className="aspect-video rounded-lg mb-2" style={{background: 'linear-gradient(135deg, var(--accent-primary), #dc2626)'}}></div>
-                    <p className="text-xs font-medium" style={{color: 'var(--accent-success)'}}>After: {example.after}</p>
+                    <p className="text-xs font-medium" style={{color: 'var(--accent-success)'}}>Professional design</p>
                   </div>
                 </div>
                 
-                <div className="px-3 py-2 rounded-full text-center text-sm font-bold" 
-                     style={{background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-primary)'}}>
-                  {example.boost}
+                <div className="px-3 py-2 rounded-lg text-center text-sm" 
+                     style={{background: 'rgba(239, 68, 68, 0.1)', color: 'var(--text-secondary)'}}>
+                  {example.description}
                 </div>
               </div>
             ))}
@@ -663,10 +662,10 @@ export const Landing: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
             {[
-              { number: '2,384,729', label: 'Thumbnails Created', subtext: 'And counting. Every single one designed to convert.' },
-              { number: '247%', label: 'Average CTR Increase', subtext: 'From scroll-past to must-watch in one thumbnail.' },
-              { number: '487M+', label: 'Views Generated', subtext: 'For creators who chose to stop blending in.' },
-              { number: '4.9★', label: 'Creator Rating', subtext: 'Based on 3,847 reviews. We\'re kinda obsessed with quality.' }
+              { number: 'Fast', label: 'AI Generation', subtext: 'Create professional thumbnails in seconds, not hours.' },
+              { number: 'Better', label: 'Click Performance', subtext: 'Well-designed thumbnails perform better than generic ones.' },
+              { number: 'Easy', label: 'No Design Skills', subtext: 'Built for creators, not designers. Anyone can use it.' },
+              { number: '4.9★', label: 'User Rating', subtext: 'Creators love the simplicity and results.' }
             ].map((stat, i) => (
               <div key={i} className="card p-6 text-center">
                 <div className="text-4xl sm:text-5xl font-bold mb-2" 
@@ -685,13 +684,13 @@ export const Landing: React.FC = () => {
 
           <div className="card p-6 text-center max-w-3xl mx-auto mb-8">
             <p className="text-sm" style={{color: 'var(--text-secondary)'}}>
-              📊 Every 60 seconds, Youbnail generates 38 thumbnails that will be viewed by 2.7 million people today.
+              📊 Youbnail helps creators around the world create better thumbnails every day.
             </p>
           </div>
 
           <div className="text-center">
             <Link to="/signup" className="btn-primary px-8 py-4 text-lg font-semibold inline-block">
-              Join 12,847 Winning Creators →
+              Get Started Today →
             </Link>
           </div>
         </div>
@@ -738,8 +737,8 @@ export const Landing: React.FC = () => {
 
           <div className="card p-6 max-w-2xl mx-auto text-center mb-8">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-sm" style={{color: 'var(--text-muted)'}}>
-              <div>📊 4.9/5 average rating from 3,847 reviews</div>
-              <div>✅ 94% would recommend to another creator</div>
+              <div>📊 High satisfaction rate from users</div>
+              <div>✅ Most creators recommend to others</div>
             </div>
           </div>
 
@@ -775,19 +774,18 @@ export const Landing: React.FC = () => {
                   ⚡ MOST POPULAR
                 </div>
                 <h3 className="text-3xl font-bold mb-4" style={{color: 'var(--text-primary)'}}>
-                  The AI That Studied 10 Million Viral Thumbnails So You Don't Have To
+                  The AI That Studied Successful Viral Thumbnails So You Don't Have To
                 </h3>
                 <p className="text-base mb-6 leading-relaxed" style={{color: 'var(--text-secondary)'}}>
-                  We didn't just build an AI. We built an AI that learned from the best. It analyzed every viral thumbnail from 2020-2026. Gaming. Education. Lifestyle. Tech. It knows what makes your niche click.
+                  We didn't just build an AI. We built an AI that learned from the best performing thumbnails across YouTube. Gaming. Education. Lifestyle. Tech. It knows what makes your niche click.
                 </p>
                 <p className="text-base mb-6 leading-relaxed" style={{color: 'var(--text-secondary)'}}>
-                  Type your video idea. The AI doesn't just generate a pretty picture. It generates a strategic weapon designed to stop the scroll, trigger curiosity, and command the click.
+                  Type your video idea. The AI doesn't just generate a pretty picture. It generates a strategic design created to stop the scroll, trigger curiosity, and earn the click.
                 </p>
                 <ul className="space-y-2 mb-6">
                   {[
-                    'Trained on 10M+ viral thumbnails across all niches',
+                    'Trained on high-performing thumbnails across all niches',
                     'Understands color psychology and visual hierarchy',
-                    'Generates 4 unique options in 3 seconds',
                     'Gets smarter with every thumbnail created',
                     'No two designs are ever exactly the same'
                   ].map((item, i) => (
@@ -819,18 +817,18 @@ export const Landing: React.FC = () => {
                   Turn Any Video Frame Into a Scroll-Stopping Thumbnail in 4 Clicks
                 </h3>
                 <p className="text-base mb-6 leading-relaxed" style={{color: 'var(--text-secondary)'}}>
-                  Already have your video? Perfect. Upload it. Youbnail automatically scans every frame and shows you the ones that will work best as thumbnails.
+                  Already have your video? Perfect. Upload it and scrub through to find the perfect frame for your thumbnail.
                 </p>
                 <p className="text-base mb-6 leading-relaxed" style={{color: 'var(--text-secondary)'}}>
-                  Found the perfect moment? Click it. Our AI removes the background, enhances colors, adds professional text, adjusts contrast, and makes it thumbnail-ready. All automatic. All instant.
+                  Found the perfect moment? Click it. Our tools enhance colors, add professional text, adjust contrast, and make it thumbnail-ready. Simple and effective.
                 </p>
                 <ul className="space-y-2 mb-6">
                   {[
-                    'Automatic frame extraction from any video',
-                    'AI identifies the most engaging moments',
-                    'One-click background removal',
-                    'Automatic color enhancement',
-                    'Professional text overlay generation',
+                    'Upload and play video files',
+                    'Manually select the best frame',
+                    'Background removal tools available',
+                    'Color and contrast enhancement',
+                    'Professional text overlay options',
                     'Supports MP4, MOV, AVI formats'
                   ].map((item, i) => (
                     <li key={i} className="flex items-start gap-3">
@@ -841,8 +839,8 @@ export const Landing: React.FC = () => {
                 </ul>
                 <div className="card p-4 mb-6" style={{background: 'rgba(239, 68, 68, 0.05)'}}>
                   <p className="text-sm font-medium" style={{color: 'var(--text-secondary)'}}>
-                    ⏱️ Average time to create thumbnail from video:<br />
-                    <span style={{color: 'var(--text-muted)'}}>Old way: 47 minutes</span> | <span style={{color: 'var(--accent-primary)'}}>Youbnail: 23 seconds</span>
+                    ⏱️ Creating thumbnails from videos:<br />
+                    <span style={{color: 'var(--text-muted)'}}>Traditional way: Time-consuming</span> | <span style={{color: 'var(--accent-primary)'}}>Youbnail: Quick & easy</span>
                   </p>
                 </div>
                 <Link to="/signup" className="btn-primary px-6 py-3 text-base font-semibold inline-block">
@@ -850,7 +848,13 @@ export const Landing: React.FC = () => {
                 </Link>
               </div>
               <div>
-                <div className="aspect-video rounded-xl" style={{background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2))', border: '2px solid var(--border-primary)'}}></div>
+                <div className="rounded-xl overflow-hidden" style={{border: '2px solid var(--border-primary)'}}>
+                  <img 
+                    src="https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/Turn%20Any%20Video%20Frame%20Into%20a%20Scroll-Stopping%20Thumbnail%20in%204%20Clicks.gif"
+                    alt="Turn Any Video Frame Into a Scroll-Stopping Thumbnail in 4 Clicks"
+                    className="w-full h-auto"
+                  />
+                </div>
               </div>
             </div>
 
@@ -1033,11 +1037,7 @@ export const Landing: React.FC = () => {
                   'Everything in Starter',
                   'Selective Region Editing',
                   'Priority Support',
-                  'Early Access to New Features',
-                  'Advanced AI Models',
-                  'Commercial License',
-                  'Batch Processing',
-                  'Custom Style Training'
+                  'Early Access to New Features'
                 ].map((feature, i) => (
                   <li key={i} className="flex items-start gap-3">
                     <svg className="w-5 h-5 flex-shrink-0 mt-0.5" style={{color: 'var(--accent-success)'}} fill="currentColor" viewBox="0 0 20 20">
@@ -1057,22 +1057,7 @@ export const Landing: React.FC = () => {
             </div>
           </div>
 
-          {/* Money-Back Guarantee */}
-          <div className="card p-8 max-w-3xl mx-auto text-center mb-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4" 
-                 style={{background: 'var(--accent-primary)', color: 'white', fontSize: '24px'}}>
-              🛡️
-            </div>
-            <h3 className="text-2xl font-bold mb-2" style={{color: 'var(--text-primary)'}}>
-              Zero Risk. Just Results.
-            </h3>
-            <p className="text-base mb-4 leading-relaxed max-w-2xl mx-auto" style={{color: 'var(--text-secondary)'}}>
-              Try any plan for 30 days. If you don't see more views, more clicks, or more growth — email us. We'll refund every penny. No forms. No hoops. No hard feelings.
-            </p>
-            <p className="text-xs" style={{color: 'var(--text-muted)'}}>
-              We've issued 23 refunds out of 12,847 customers. That's a 99.82% satisfaction rate.
-            </p>
-          </div>
+
         </div>
       </section>
 
@@ -1084,7 +1069,7 @@ export const Landing: React.FC = () => {
               Everything Else You're Wondering
             </h2>
             <p className="text-lg sm:text-xl" style={{color: 'var(--text-secondary)'}}>
-              We've answered these questions 4,782 times. Here they are in one place.
+              Common questions about Youbnail, answered clearly.
             </p>
           </div>
 
@@ -1160,9 +1145,8 @@ export const Landing: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-white/70">
-            <span>🔥 23 creators joined in the last hour</span>
-            <span>📊 847 thumbnails created today</span>
-            <span>⭐ 4.9★ from 3,847 reviews</span>
+            <span>🔥 Growing daily</span>
+            <span>📊 Loved by YouTube creators</span>
           </div>
         </div>
       </section>
@@ -1302,7 +1286,7 @@ export const Landing: React.FC = () => {
             <div>
               <h4 className="font-semibold mb-4" style={{color: 'var(--text-primary)'}}>Get Thumbnail Tips Weekly</h4>
               <p className="text-xs mb-4" style={{color: 'var(--text-muted)'}}>
-                Join 8,492 creators getting weekly tips on CTR optimization, YouTube growth, and thumbnail trends.
+                Join creators getting weekly tips on CTR optimization, YouTube growth, and thumbnail trends.
               </p>
               <form onSubmit={handleNewsletterSubmit} className="flex flex-col gap-2">
                 <input

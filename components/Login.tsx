@@ -87,7 +87,11 @@ export const Login: React.FC = () => {
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-lg flex items-center justify-center font-semibold text-white mx-auto mb-4" 
                style={{background: 'linear-gradient(135deg, var(--accent-primary), #dc2626)', boxShadow: '0 0 20px rgba(239, 68, 68, 0.4)'}}>
-            <span className="text-2xl">YB</span>
+            <img 
+              src="https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/youbnail%20favicon%20(1).png" 
+              alt="Youbnail" 
+              className="w-10 h-10"
+            />
           </div>
           <h1 className="text-2xl font-bold mb-2" style={{color: 'var(--text-primary)'}}>
             Welcome Back
