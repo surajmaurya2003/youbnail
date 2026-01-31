@@ -28,6 +28,8 @@ import { ImageEditor } from './components/ImageEditor';
 import { VideoSnapshot } from './components/VideoSnapshot';
 import { Login } from './components/Login';
 import { Signup } from './components/Signup';
+import { securityMonitor } from './lib/security';
+import { getEnvironmentInfo } from './lib/config';
 import { Landing } from './components/Landing';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { TermsOfService } from './components/TermsOfService';
