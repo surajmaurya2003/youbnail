@@ -17,7 +17,8 @@ import {
   ChatBubbleLeftRightIcon,
   EnvelopeIcon,
   AtSymbolIcon,
-  BoltIcon
+  BoltIcon,
+  BellIcon
 } from '@heroicons/react/24/outline';
 import { Sidebar } from './components/Sidebar';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -40,6 +41,7 @@ import Pricing_04 from './components/ui/ruixen-pricing-04';
 import { ToastProvider, useToast } from './components/ui/toast';
 import { AlertModal, ConfirmModal, Modal } from './components/ui/modal';
 import { useModal } from './components/ui/use-modal';
+import { NotificationsPanel } from './components/NotificationsPanel';
 
 
 const AppWithToast: React.FC = () => {
@@ -105,6 +107,18 @@ const AppWithToast: React.FC = () => {
   const [history, setHistory] = useState<GeneratedThumbnail[]>([]);
   const [usageHistory, setUsageHistory] = useState<UsageRecord[]>([]);
   const [isLoadingGallery, setIsLoadingGallery] = useState(true);
+  
+  // Generation tracking and notifications
+  const [activeGenerations, setActiveGenerations] = useState<Map<string, {
+    id: string;
+    prompt: string;
+    progress: number;
+    status: 'generating' | 'completed' | 'failed';
+    result?: string;
+    error?: string;
+    startTime: number;
+  }>>(new Map());
+  const [showNotifications, setShowNotifications] = useState(false);
   const [isLoadingUsage, setIsLoadingUsage] = useState(true);
   const [isCancellingSubscription, setIsCancellingSubscription] = useState(false);
   const [showMockup, setShowMockup] = useState(false);
@@ -123,6 +137,10 @@ const AppWithToast: React.FC = () => {
   const [shareModalUrl, setShareModalUrl] = useState<string>('');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   
+  // Current generation tracking
+  const [currentGenerationId, setCurrentGenerationId] = useState<string | null>(null);
+  const [skeletonPrompt, setSkeletonPrompt] = useState<string>('');
+  
   // Track the current user ID to prevent resetting edit fields unnecessarily
   const currentUserIdRef = useRef<string | null>(null);
   const editFieldsInitializedRef = useRef<boolean>(false);
@@ -135,6 +153,81 @@ const AppWithToast: React.FC = () => {
   const promptRef1 = useRef<HTMLTextAreaElement>(null);
   const promptRef2 = useRef<HTMLTextAreaElement>(null);
   const refUploadInputRef = useRef<HTMLInputElement>(null);
+
+  // Skeleton Preview Component
+  const SkeletonPreview: React.FC<{ prompt: string; progress: number }> = ({ prompt, progress }) => {
+    const [shimmerPosition, setShimmerPosition] = useState(0);
+    
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setShimmerPosition(prev => (prev + 1) % 3);
+      }, 800);
+      return () => clearInterval(interval);
+    }, []);
+    
+    return (
+      <div className="relative w-full h-full rounded-xl overflow-hidden border" 
+           style={{borderColor: 'var(--border-primary)', background: 'var(--bg-card)', aspectRatio: options.aspectRatio === '9:16' ? '9/16' : '16/9'}}>        
+        {/* Base skeleton */}
+        <div className="absolute inset-0" style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%)'}}>
+          {/* Animated gradient overlay */}
+          <div 
+            className="absolute inset-0 opacity-30"
+            style={{
+              background: `linear-gradient(45deg, 
+                transparent 0%, 
+                transparent ${shimmerPosition * 30}%, 
+                rgba(239, 68, 68, 0.1) ${shimmerPosition * 30 + 10}%, 
+                rgba(239, 68, 68, 0.2) ${shimmerPosition * 30 + 20}%, 
+                rgba(239, 68, 68, 0.1) ${shimmerPosition * 30 + 30}%, 
+                transparent ${shimmerPosition * 30 + 40}%, 
+                transparent 100%)
+              `,
+              animation: 'skeleton-pulse 2s ease-in-out infinite'
+            }}
+          />
+          
+          {/* Content placeholder blocks */}
+          <div className="absolute inset-4 flex flex-col justify-between">
+            {/* Top elements */}
+            <div className="flex justify-between items-start">
+              <div className="w-20 h-6 rounded" style={{background: 'rgba(239, 68, 68, 0.15)'}} />
+              <div className="w-16 h-4 rounded" style={{background: 'rgba(239, 68, 68, 0.1)'}} />
+            </div>
+            
+            {/* Center elements */}
+            <div className="text-center space-y-3">
+              <div className="mx-auto w-32 h-8 rounded" style={{background: 'rgba(239, 68, 68, 0.2)'}} />
+              <div className="mx-auto w-24 h-4 rounded" style={{background: 'rgba(239, 68, 68, 0.1)'}} />
+            </div>
+            
+            {/* Bottom elements */}
+            <div className="flex justify-between items-end">
+              <div className="w-24 h-5 rounded" style={{background: 'rgba(239, 68, 68, 0.12)'}} />
+              <div className="flex gap-2">
+                <div className="w-3 h-3 rounded-full" style={{background: 'rgba(239, 68, 68, 0.3)'}} />
+                <div className="w-3 h-3 rounded-full" style={{background: 'rgba(239, 68, 68, 0.2)'}} />
+                <div className="w-3 h-3 rounded-full" style={{background: 'rgba(239, 68, 68, 0.15)'}} />
+              </div>
+            </div>
+          </div>
+          
+          {/* Generation info overlay */}
+          <div className="absolute inset-x-0 bottom-0 p-4" style={{background: 'linear-gradient(transparent, rgba(0,0,0,0.8))'}}>
+            <div className="text-center space-y-2">
+              <div className="text-xs font-medium" style={{color: 'var(--text-secondary)'}}>
+                Generating: {prompt}
+              </div>
+              <div className="flex items-center justify-center gap-2 text-xs" style={{color: 'var(--text-muted)'}}>
+                <div className="animate-pulse">●</div>
+                AI is creating your thumbnail...
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // Initialize auth and load user data
   useEffect(() => {
@@ -323,6 +416,26 @@ const AppWithToast: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Cleanup old completed generations after 5 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveGenerations(prev => {
+        const updated = new Map(prev);
+        const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+        
+        for (const [id, generation] of updated.entries()) {
+          if ((generation as any).status !== 'generating' && (generation as any).startTime < fiveMinutesAgo) {
+            updated.delete(id);
+          }
+        }
+        
+        return updated.size === prev.size ? prev : updated;
+      });
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, []);
+
   // Sync URL with activeTab (only when authenticated and in AppContent)
   useEffect(() => {
     if (!isAuthenticated || !user) return;
@@ -433,8 +546,26 @@ const AppWithToast: React.FC = () => {
       return;
     }
 
+    // Create generation ID and track it
+    const generationId = `gen-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const currentPromptText = isPartialUpdate 
+      ? `Modified: ${editPromptRef.current?.value || ''}` 
+      : (promptRef1.current?.value || promptRef2.current?.value || prompt || "Amazing YouTube Thumbnail");
+    
+    setCurrentGenerationId(generationId);
+    setSkeletonPrompt(currentPromptText);
     setIsGenerating(true);
     setGenerationProgress(5); // Start at 5% when generation begins
+    setGeneratedThumb(null);
+    
+    // Add to active generations for notification tracking
+    setActiveGenerations(prev => new Map(prev.set(generationId, {
+      id: generationId,
+      prompt: currentPromptText,
+      progress: 5,
+      status: 'generating',
+      startTime: Date.now()
+    })));
     
     // Realistic progress simulation - only during AI generation
     // This simulates the actual generation time (typically 10-30 seconds)
@@ -448,7 +579,18 @@ const AppWithToast: React.FC = () => {
         // Use a logarithmic curve for more realistic feel (slower at start, faster in middle)
         const progressRatio = Math.min(elapsed / estimatedGenerationTime, 0.95);
         const progress = 5 + (progressRatio * 90); // 5% to 95%
-        setGenerationProgress(Math.min(Math.round(progress), 95));
+        const roundedProgress = Math.min(Math.round(progress), 95);
+        setGenerationProgress(roundedProgress);
+        
+        // Update notification progress
+        setActiveGenerations(prev => {
+          const updated = new Map(prev);
+          const gen = updated.get(generationId);
+          if (gen) {
+            updated.set(generationId, { ...(gen as any), progress: roundedProgress });
+          }
+          return updated;
+        });
       }, 500); // Update every 500ms for smoother progress
       return interval;
     };
@@ -465,7 +607,7 @@ const AppWithToast: React.FC = () => {
       
       // Start AI generation - this is where progress should be tracked
       const result = await ThumbnailAI.generateThumbnail(
-        currentPrompt || "Amazing YouTube Thumbnail", 
+        currentPromptText || "Amazing YouTube Thumbnail", 
         baseImg || undefined, 
         currentOptions,
         isPartialUpdate ? selectedArea : null
@@ -474,6 +616,16 @@ const AppWithToast: React.FC = () => {
       // Generation complete - jump to 100%
       clearInterval(progressInterval);
       setGenerationProgress(100);
+      
+      // Update notification status
+      setActiveGenerations(prev => {
+        const updated = new Map(prev);
+        const gen = updated.get(generationId);
+        if (gen) {
+          updated.set(generationId, { ...(gen as any), progress: 100, status: 'completed', result });
+        }
+        return updated;
+      });
       
       // Show image immediately - don't wait for upload (better UX)
       setGeneratedThumb(result);
@@ -529,11 +681,6 @@ const AppWithToast: React.FC = () => {
         }
       })();
       
-      // Prepare prompt text once (avoid multiple ref reads)
-      const promptText = isPartialUpdate 
-        ? `Modified: ${editPromptRef.current?.value || ''}` 
-        : (promptRef1.current?.value || promptRef2.current?.value || prompt || "Visual Composite");
-      
       // Wait for upload to complete before saving to DB (but UI already shows image)
       await uploadPromise;
       
@@ -543,7 +690,7 @@ const AppWithToast: React.FC = () => {
           user.id,
           {
             url: publicUrl,
-            prompt: promptText,
+            prompt: currentPromptText,
           },
           storagePath,
           options.aspectRatio || '16:9'
@@ -553,7 +700,7 @@ const AppWithToast: React.FC = () => {
           mode: mode,
           aspectRatio: options.aspectRatio || '16:9',
           credits: 1,
-          prompt: currentPrompt || undefined
+          prompt: currentPromptText || undefined
         })
       ]);
       
@@ -585,10 +732,21 @@ const AppWithToast: React.FC = () => {
       setTimeout(() => {
         setIsGenerating(false);
         setGenerationProgress(0);
+        setCurrentGenerationId(null);
       }, 1500);
     } catch (error: any) {
       clearInterval(progressInterval);
       console.error('Thumbnail generation failed');
+      
+      // Update notification with error status
+      setActiveGenerations(prev => {
+        const updated = new Map(prev);
+        const gen = updated.get(generationId);
+        if (gen) {
+          updated.set(generationId, { ...(gen as any), status: 'failed', error: error.message });
+        }
+        return updated;
+      });
       
       // Production-ready error handling with specific messages
       let errorMessage = 'Failed to generate thumbnail. Please try again.';
@@ -815,6 +973,56 @@ const AppWithToast: React.FC = () => {
   const handleEditEmailChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setEditEmail(e.target.value);
   }, []);
+
+  // Notification panel handlers
+  const handleRemoveGeneration = useCallback((id: string) => {
+    setActiveGenerations(prev => {
+      const updated = new Map(prev);
+      updated.delete(id);
+      return updated;
+    });
+  }, []);
+
+  const handleDownloadFromNotification = useCallback(async (imageUrl: string) => {
+    try {
+      console.log('Notification download initiated for:', imageUrl);
+      const response = await fetch(imageUrl, {
+        mode: 'cors',
+        headers: {
+          'Accept': 'image/*'
+        }
+      });
+      if (!response.ok) throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `youbnail-thumbnail-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      URL.revokeObjectURL(blobUrl);
+      console.log('Notification download completed');
+      showSuccess('Downloaded!', 'Thumbnail saved to your device');
+    } catch (error) {
+      console.error('Notification download failed:', error);
+      // Fallback: try direct download
+      try {
+        const link = document.createElement('a');
+        link.href = imageUrl;
+        link.download = `youbnail-thumbnail-${Date.now()}.png`;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (fallbackError) {
+        console.error('Notification fallback failed:', fallbackError);
+        showError('Download Failed', 'Unable to download thumbnail. Please try accessing it from the gallery.');
+      }
+    }
+  }, [showSuccess, showError]);
 
   const renderCreationPanel = () => {
     switch (mode) {
@@ -1067,6 +1275,20 @@ const AppWithToast: React.FC = () => {
                 </div>
               </div>
               <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative w-10 h-10 bg-gray-800 hover:bg-gray-700 rounded-xl flex items-center justify-center transition-all hover:scale-105 shadow-lg"
+                title="Generation Progress"
+              >
+                <BellIcon className="w-5 h-5 text-gray-300" />
+                {activeGenerations.size > 0 && (
+                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-bold text-white">
+                      {Array.from(activeGenerations.values()).filter((g: any) => g.status === 'generating').length || activeGenerations.size}
+                    </span>
+                  </div>
+                )}
+              </button>
+              <button
                 onClick={() => navigateToTab('profile')}
                 className="w-10 h-10 bg-red-600 hover:bg-red-700 rounded-xl flex items-center justify-center text-sm font-bold text-white transition-all hover:scale-105 shadow-lg" 
                 title={user.name}
@@ -1235,7 +1457,7 @@ const AppWithToast: React.FC = () => {
                   <div className="text-sm font-semibold text-center" style={{color: 'var(--text-muted)'}}>Before</div>
                   <div className="relative rounded-xl overflow-hidden border" style={{borderColor: 'var(--border-primary)', aspectRatio: '16/9'}}>
                     <img 
-                      src="https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/thumbnails/before-example.jpg" 
+                      src="https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/before.png" 
                       alt="Before thumbnail"
                       className="w-full h-full object-cover"
                       onError={(e) => {
@@ -1251,26 +1473,28 @@ const AppWithToast: React.FC = () => {
                   <div className="text-sm font-semibold text-center" style={{color: 'var(--text-muted)'}}>After</div>
                   <div className="relative rounded-xl overflow-hidden border" style={{borderColor: 'var(--border-primary)', aspectRatio: '16/9'}}>
                     <img 
-                      src={[
-                        'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/Generated%20Image%20December%2024,%202025%20-%201_12AM.jpeg',
-                        'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/Generated%20Image%20December%2024,%202025%20-%201_12AM%20(1).jpeg',
-                        'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/Generated%20Image%20December%2024,%202025%20-%201_11AM%20(1).jpeg',
-                        'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/czarthumbnail3.jpeg',
-                        'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnaile%20December%2030,%202025%20-%2010_43AM.jpeg',
-                        'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnaile%20December%2030,%202025%20-%2010_42AM%20(3).jpeg',
-                        'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnaile%20December%2030,%202025%20-%2010_42AM%20(1).jpeg',
-                        'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnaile%20December%2030,%202025%20-%2010_40AM.jpeg',
-                        'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnail1%20January%2007,%202026%20-%2010_06AM%20(4).jpeg',
-                        'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnail1%20January%2007,%202026%20-%2010_06AM%20(3).jpeg',
-                        'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnail1%20January%2007,%202026%20-%2010_06AM%20(2).jpeg',
-                        'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnail1%20January%2007,%202026%20-%2010_05AM.jpeg'
-                      ][currentAfterImageIndex]}
+                      src="https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/after.png"
                       alt="After thumbnail"
                       className="w-full h-full object-cover transition-opacity duration-500"
-                      key={currentAfterImageIndex}
                     />
                   </div>
                 </div>
+              </div>
+              
+              {/* Creator Credit */}
+              <div className="text-center mt-6">
+                <p className="text-sm text-gray-400">
+                  Example from{" "}
+                  <a 
+                    href="https://www.youtube.com/@CzarDanya/videos" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-red-400 hover:text-red-300 transition-colors underline"
+                  >
+                    @CzarDanya
+                  </a>
+                  {" "}YouTube Channel
+                </p>
               </div>
             </div>
 
@@ -1533,38 +1757,47 @@ const AppWithToast: React.FC = () => {
                       </p>
                     </div>
                   ) : isGenerating ? (
-                    <div className="text-center py-16 w-full max-w-md mx-auto">
-                      <div className="mb-6">
-                        <div className="w-full h-3 rounded-full overflow-hidden" style={{background: '#1a1a1a', border: '1px solid #4b5563'}}>
-                          <div 
-                            className="h-full rounded-full transition-all duration-300 ease-out relative overflow-hidden"
-                            style={{
-                              width: `${generationProgress}%`,
-                              background: '#ef4444',
-                              boxShadow: '0 0 10px rgba(239, 68, 68, 0.5)'
-                            }}
-                          >
+                    <div className="relative w-full h-full flex flex-col">
+                      {/* Skeleton Preview */}
+                      <div className="flex-1 min-h-[450px]">
+                        <SkeletonPreview prompt={skeletonPrompt} progress={generationProgress} />
+                      </div>
+                      
+                      {/* Progress bar overlay */}
+                      <div className="absolute bottom-6 left-6 right-6">
+                        <div className="bg-black/80 backdrop-blur-sm rounded-lg p-4 border" style={{borderColor: 'var(--border-primary)'}}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium" style={{color: 'var(--text-primary)'}}>Generating...</span>
+                            <span className="text-sm font-semibold" style={{color: 'var(--text-primary)'}}>               {generationProgress}%
+                            </span>
+                          </div>
+                          <div className="w-full h-2 rounded-full overflow-hidden" style={{background: '#1a1a1a'}}>
                             <div 
-                              className="absolute inset-0"
+                              className="h-full rounded-full transition-all duration-300 ease-out relative overflow-hidden"
                               style={{
-                                background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent)',
-                                animation: 'shimmer 1.5s infinite',
-                                transform: 'translateX(-100%)'
+                                width: `${generationProgress}%`,
+                                background: 'linear-gradient(90deg, #ef4444, #dc2626)',
+                                boxShadow: '0 0 8px rgba(239, 68, 68, 0.4)'
                               }}
-                            />
+                            >
+                              <div 
+                                className="absolute inset-0"
+                                style={{
+                                  background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent)',
+                                  animation: 'shimmer 1.5s infinite'
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <div className="text-xs mt-2 text-center" style={{color: 'var(--text-secondary)'}}>
+                            {generationProgress < 30 ? 'Analyzing your prompt...' :
+                             generationProgress < 60 ? 'Creating visual elements...' :
+                             generationProgress < 90 ? 'Adding finishing touches...' :
+                             generationProgress < 100 ? 'Optimizing quality...' :
+                             'Complete!'}
                           </div>
                         </div>
-                        <p className="text-sm font-semibold mt-3" style={{color: 'var(--text-primary)'}}>
-                          {generationProgress}%
-                        </p>
                       </div>
-                      <p className="text-sm font-medium" style={{color: 'var(--text-secondary)'}}>
-                        {generationProgress < 30 ? 'Starting generation...' :
-                         generationProgress < 60 ? 'Creating your thumbnail...' :
-                         generationProgress < 90 ? 'Almost done...' :
-                         generationProgress < 100 ? 'Finalizing...' :
-                         'Complete!'}
-                      </p>
                     </div>
                   ) : isEditMode ? (
                     <div className="w-full h-full flex flex-col gap-6 animate-in zoom-in-95 duration-500">
@@ -1652,10 +1885,14 @@ const AppWithToast: React.FC = () => {
                              <button
                                onClick={async () => {
                                  try {
+                                   console.log('Download initiated for:', generatedThumb);
+                                   
                                    // Handle both base64 data URIs and URLs
                                    if (generatedThumb!.startsWith('data:image')) {
+                                     console.log('Processing base64 image');
                                      // For base64, create blob from data URI
                                      const response = await fetch(generatedThumb!);
+                                     if (!response.ok) throw new Error('Failed to fetch base64 image');
                                      const blob = await response.blob();
                                      const blobUrl = URL.createObjectURL(blob);
                                      
@@ -1667,9 +1904,17 @@ const AppWithToast: React.FC = () => {
                                      document.body.removeChild(link);
                                      
                                      URL.revokeObjectURL(blobUrl);
+                                     console.log('Base64 download completed');
                                    } else {
+                                     console.log('Processing URL image');
                                      // For URLs (including cross-origin), fetch as blob
-                                     const response = await fetch(generatedThumb!);
+                                     const response = await fetch(generatedThumb!, {
+                                       mode: 'cors',
+                                       headers: {
+                                         'Accept': 'image/*'
+                                       }
+                                     });
+                                     if (!response.ok) throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
                                      const blob = await response.blob();
                                      const blobUrl = URL.createObjectURL(blob);
                                      
@@ -1681,17 +1926,25 @@ const AppWithToast: React.FC = () => {
                                      document.body.removeChild(link);
                                      
                                      URL.revokeObjectURL(blobUrl);
+                                     console.log('URL download completed');
                                    }
+                                   showSuccess('Download Started', 'Your thumbnail is being downloaded');
                                  } catch (error) {
-                                   console.error('Download operation failed');
+                                   console.error('Download operation failed:', error);
                                    // Fallback: try direct download
-                                   const link = document.createElement('a');
-                                   link.href = generatedThumb!;
-                                   link.download = `thumbpro-thumbnail-${Date.now()}.png`;
-                                   link.target = '_blank';
-                                   document.body.appendChild(link);
-                                   link.click();
-                                   document.body.removeChild(link);
+                                   try {
+                                     const link = document.createElement('a');
+                                     link.href = generatedThumb!;
+                                     link.download = `youbnail-thumbnail-${Date.now()}.png`;
+                                     link.target = '_blank';
+                                     document.body.appendChild(link);
+                                     link.click();
+                                     document.body.removeChild(link);
+                                     console.log('Fallback download attempted');
+                                   } catch (fallbackError) {
+                                     console.error('Fallback download failed:', fallbackError);
+                                     showError('Download Failed', 'Unable to download the thumbnail. Please try right-clicking and selecting "Save image as..."');
+                                   }
                                  }
                                }}
                                className="btn-primary px-6"
@@ -1786,8 +2039,15 @@ const AppWithToast: React.FC = () => {
                          <button
                            onClick={async () => {
                              try {
+                               console.log('Gallery download initiated for:', item.url);
                                // Fetch the image to download it properly (works with cross-origin URLs)
-                               const response = await fetch(item.url);
+                               const response = await fetch(item.url, {
+                                 mode: 'cors',
+                                 headers: {
+                                   'Accept': 'image/*'
+                                 }
+                               });
+                               if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
                                const blob = await response.blob();
                                const blobUrl = URL.createObjectURL(blob);
                                
@@ -1801,10 +2061,26 @@ const AppWithToast: React.FC = () => {
                                
                                // Clean up blob URL
                                URL.revokeObjectURL(blobUrl);
+                               console.log('Gallery download completed');
+                               showSuccess('Download Started', 'Your thumbnail is being downloaded');
                              } catch (error) {
-                               console.error('Download failed:', error);
-                               // Fallback: open in new tab if download fails
-                               window.open(item.url, '_blank');
+                               console.error('Gallery download failed:', error);
+                               // Fallback: try direct download
+                               try {
+                                 const link = document.createElement('a');
+                                 link.href = item.url;
+                                 link.download = `youbnail-thumbnail-${item.id || Date.now()}.png`;
+                                 link.target = '_blank';
+                                 document.body.appendChild(link);
+                                 link.click();
+                                 document.body.removeChild(link);
+                                 console.log('Fallback download attempted');
+                               } catch (fallbackError) {
+                                 console.error('Fallback failed:', fallbackError);
+                                 // Last resort: open in new tab
+                                 window.open(item.url, '_blank');
+                                 showWarning('Download Issue', 'The image opened in a new tab. Right-click and select "Save image as..." to download');
+                               }
                              }
                            }}
                            className="p-3 bg-white/20 backdrop-blur-sm rounded-xl text-white hover:bg-white/30 transition-colors"
@@ -2587,28 +2863,6 @@ const AppWithToast: React.FC = () => {
                   </svg>
                   <span>Share File</span>
                 </button>
-                
-                <button
-                  onClick={() => {
-                    const text = `Check out this amazing YouTube thumbnail I created with Youbnail! ${shareModalUrl}`;
-                    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
-                    window.open(url, '_blank');
-                    setIsShareModalOpen(false);
-                  }}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-white border"
-                  style={{
-                    backgroundColor: 'var(--accent-primary)', 
-                    borderColor: 'var(--accent-primary)',
-                    ':hover': { backgroundColor: 'var(--accent-hover)' }
-                  }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--accent-hover)'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--accent-primary)'}
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-                  </svg>
-                  <span>Share on Twitter</span>
-                </button>
               </div>
               
               <button
@@ -2634,6 +2888,15 @@ const AppWithToast: React.FC = () => {
             </div>
           </div>
         </div>
+        
+        {/* Notifications Panel */}
+        <NotificationsPanel
+          generations={activeGenerations}
+          isOpen={showNotifications}
+          onClose={() => setShowNotifications(false)}
+          onRemoveGeneration={handleRemoveGeneration}
+          onDownloadResult={handleDownloadFromNotification}
+        />
       </>
     );
   }
