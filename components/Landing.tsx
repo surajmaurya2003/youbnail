@@ -35,7 +35,6 @@ export const Landing: React.FC = () => {
 
   const useCases = [
     {
-      emoji: '🎮',
       label: 'Gaming',
       name: 'Alex, Gaming Streamer',
       challenge: '"I upload 3 videos a week. Designing thumbnails takes longer than editing the actual videos. And they still look amateur."',
@@ -48,7 +47,6 @@ export const Landing: React.FC = () => {
       result: '+247% CTR increase, uploads 5x per week now'
     },
     {
-      emoji: '💼',
       label: 'Education',
       name: 'Maria, Online Educator',
       challenge: '"Professional thumbnails cost $75 each. With 40+ lessons per course, that\'s $3,000 just on thumbnails."',
@@ -61,7 +59,6 @@ export const Landing: React.FC = () => {
       result: 'Saved $3,000, course CTR up 156%'
     },
     {
-      emoji: '💰',
       label: 'Finance',
       name: 'James, Finance Educator',
       challenge: '"Clickbait thumbnails hurt my credibility. But boring thumbnails get ignored. I need professional, trustworthy, AND eye-catching."',
@@ -74,7 +71,6 @@ export const Landing: React.FC = () => {
       result: '+189% views while maintaining professional brand'
     },
     {
-      emoji: '✨',
       label: 'Lifestyle',
       name: 'Sophie, Lifestyle Creator',
       challenge: '"Every thumbnail needs to match my aesthetic. It takes me 3 hours in Canva and still doesn\'t look professional."',
@@ -87,7 +83,6 @@ export const Landing: React.FC = () => {
       result: '+312% engagement, cohesive brand identity'
     },
     {
-      emoji: '💪',
       label: 'Fitness',
       name: 'Marcus, Fitness Coach',
       challenge: '"My content is transformational, but my thumbnails look like everyone else\'s. I need to stand out in a crowded niche."',
@@ -208,7 +203,7 @@ export const Landing: React.FC = () => {
     },
     {
       q: 'What if I don\'t like any of the generated options?',
-      a: 'Regenerate. Different prompt. Different style. Try again. With Starter plan, you get unlimited generations. Keep going until you find the one that makes you say "YES."'
+      a: 'Regenerate. Different prompt. Different style. Try again. With your monthly credit allowance, you can keep generating until you find the one that makes you say "YES."'
     },
     {
       q: 'Is my data secure?',
@@ -246,7 +241,7 @@ export const Landing: React.FC = () => {
                       className="ml-1 px-3 py-2 text-sm font-medium transition-colors rounded-full hover:bg-white/5" 
                       style={{color: 'var(--text-secondary)'}}>Login</Link>
                 <Link to="/signup" className="ml-1 btn-primary px-4 py-2 text-sm font-semibold inline-flex items-center gap-2">
-                  Sign Up Free
+                  Get Started
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M7 7h10v10" /><path d="M7 17 17 7" />
                   </svg>
@@ -291,7 +286,7 @@ export const Landing: React.FC = () => {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12 mt-8">
             <Link to="/signup" className="btn-primary px-8 py-4 text-lg font-semibold w-full sm:w-auto">
-              Start Creating Free →
+              Get Started →
             </Link>
             <button onClick={() => scrollToSection('video-demo')} className="btn-secondary px-8 py-4 text-lg font-semibold w-full sm:w-auto">
               Watch 30-Sec Demo
@@ -369,7 +364,6 @@ export const Landing: React.FC = () => {
 
             {/* New Way */}
             <div className="card p-8 border-2" style={{borderColor: 'var(--accent-primary)', background: 'rgba(239, 68, 68, 0.05)', boxShadow: '0 0 40px rgba(239, 68, 68, 0.1)'}}>
-              <div className="text-4xl mb-4">✨</div>
               <h3 className="text-2xl font-bold mb-2" style={{color: 'var(--text-primary)'}}>The Youbnail Way</h3>
               <p className="text-lg mb-6" style={{color: 'var(--text-secondary)'}}>Click. Type. Download. Succeed.</p>
               
@@ -428,17 +422,8 @@ export const Landing: React.FC = () => {
             </div>
           </div>
 
-          <div className="card p-6 mb-8 inline-block">
-            <p className="text-base italic mb-2" style={{color: 'var(--text-secondary)'}}>
-              "I made 10 thumbnails in the time it used to take me to open Photoshop."
-            </p>
-            <p className="text-sm font-medium" style={{color: 'var(--text-muted)'}}>
-              — Michael T., Tech YouTuber (487K subs)
-            </p>
-          </div>
-
           <Link to="/signup" className="btn-primary px-8 py-4 text-lg font-semibold inline-block">
-            Try It Yourself — Free →
+            Try It Yourself →
           </Link>
         </div>
       </section>
@@ -495,15 +480,14 @@ export const Landing: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {[
-              { emoji: '🎮', category: 'GAMING', before: '847 views | 2.1% CTR', after: '84,732 views | 18.7% CTR', boost: '+9,906% views in 48 hours' },
-              { emoji: '💻', category: 'TECH', before: '1,284 views | 3.4% CTR', after: '67,291 views | 15.2% CTR', boost: '+5,139% views boost' },
-              { emoji: '✨', category: 'LIFESTYLE', before: '623 views | 1.8% CTR', after: '41,827 views | 16.9% CTR', boost: '+6,613% more views' },
-              { emoji: '📚', category: 'EDUCATION', before: '2,103 views | 4.2% CTR', after: '89,447 views | 19.3% CTR', boost: '+4,153% growth' }
+              { category: 'GAMING', before: '847 views | 2.1% CTR', after: '84,732 views | 18.7% CTR', boost: '+9,906% views in 48 hours' },
+              { category: 'TECH', before: '1,284 views | 3.4% CTR', after: '67,291 views | 15.2% CTR', boost: '+5,139% views boost' },
+              { category: 'LIFESTYLE', before: '623 views | 1.8% CTR', after: '41,827 views | 16.9% CTR', boost: '+6,613% more views' },
+              { category: 'EDUCATION', before: '2,103 views | 4.2% CTR', after: '89,447 views | 19.3% CTR', boost: '+4,153% growth' }
             ].map((example, i) => (
               <div key={i} className="card p-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <span className="text-2xl">{example.emoji}</span>
-                  <span className="text-xs font-bold tracking-wider" style={{color: 'var(--text-muted)'}}>{example.category}</span>
+                  <span className="text-xs font-bold tracking-wider" style={{color: 'var(--accent-primary)'}}>{example.category}</span>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 mb-4">
@@ -527,7 +511,7 @@ export const Landing: React.FC = () => {
 
           <div className="text-center mt-12">
             <Link to="/signup" className="btn-primary px-8 py-4 text-lg font-semibold inline-block">
-              Get These Results — Start Free →
+              Get These Results — Get Started →
             </Link>
           </div>
         </div>
@@ -617,7 +601,6 @@ export const Landing: React.FC = () => {
                 onClick={() => setActiveUseCase(i)}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeUseCase === i ? 'btn-primary' : 'btn-secondary'}`}
               >
-                <span className="mr-2">{useCase.emoji}</span>
                 {useCase.label}
               </button>
             ))}
@@ -820,7 +803,7 @@ export const Landing: React.FC = () => {
                   </p>
                 </div>
                 <Link to="/signup" className="btn-primary px-6 py-3 text-base font-semibold inline-block">
-                  Try AI Generation Free →
+                  Try AI Generation →
                 </Link>
               </div>
             </div>
@@ -922,7 +905,7 @@ export const Landing: React.FC = () => {
               These three tools are just the beginning.
             </h3>
             <p className="text-lg mb-6" style={{color: 'var(--text-secondary)'}}>
-              Start free. No credit card. No catch.
+              Get started today. No commitment.
             </p>
             <Link to="/signup" className="btn-primary px-8 py-4 text-lg font-semibold inline-block">
               Start Creating Now →
@@ -941,10 +924,10 @@ export const Landing: React.FC = () => {
           </div>
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4" style={{color: 'var(--text-primary)'}}>
-              Start Free. Upgrade When You're Addicted.
+              Choose Your Growth Plan
             </h2>
             <p className="text-lg sm:text-xl mb-8" style={{color: 'var(--text-secondary)'}}>
-              No credit card required. No sneaky upsells. Just honest pricing for honest creators.
+              Simple pricing for serious creators. Choose your plan.
             </p>
 
             {/* Toggle */}
@@ -967,28 +950,39 @@ export const Landing: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-16">
-            {/* Free Tier */}
+            {/* Starter Plan */}
             <div className="card p-8 border-2" style={{borderColor: 'var(--border-primary)'}}>
-              <div className="text-4xl mb-4">🎁</div>
-              <h3 className="text-2xl font-bold mb-2" style={{color: 'var(--text-primary)'}}>Free Forever</h3>
+              <div className="text-4xl mb-4">🚀</div>
+              <h3 className="text-2xl font-bold mb-2" style={{color: 'var(--text-primary)'}}>Starter</h3>
               <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-5xl font-bold" style={{color: 'var(--text-primary)'}}>$0</span>
-                <span style={{color: 'var(--text-muted)'}}>/forever</span>
+                <span className="text-5xl font-bold" style={{color: 'var(--text-primary)'}}>
+                  ${pricingToggle === 'monthly' ? '20' : '14'}
+                </span>
+                <span style={{color: 'var(--text-muted)'}}>
+                  /month {pricingToggle === 'annual' && '(billed annually)'}
+                </span>
               </div>
-              <p className="text-sm mb-6" style={{color: 'var(--text-muted)'}}>PERFECT FOR TESTING</p>
+              <p className="text-sm mb-6" style={{color: 'var(--text-muted)'}}>FOR GROWING CREATORS</p>
               
               <p className="text-sm mb-6" style={{color: 'var(--text-secondary)'}}>
-                Try before you commit. Create real thumbnails. See real results.
+                Perfect for consistent content creators who need reliable thumbnail generation.
               </p>
+
+              <div className="px-3 py-2 rounded-lg mb-6 text-center text-sm font-medium" 
+                   style={{background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-primary)'}}>
+                {pricingToggle === 'monthly' ? '30' : '360'} thumbnails included
+              </div>
 
               <ul className="space-y-3 mb-8">
                 {[
-                  '5 AI-generated thumbnails per month',
-                  'All basic templates',
-                  'HD downloads (1280x720)',
-                  'Video snapshot tool',
-                  'Basic text customization',
-                  'No watermarks'
+                  'Prompt-to-Thumbnail Generation',
+                  'Reference Image Mode',
+                  'Video Snapshot Mode',
+                  '16:9 & 9:16 Aspect Ratios',
+                  'Overlay Text',
+                  'Quick Theme Presets (8 themes)',
+                  'Style & Lighting Controls',
+                  'Gallery & History'
                 ].map((feature, i) => (
                   <li key={i} className="flex items-start gap-3">
                     <svg className="w-5 h-5 flex-shrink-0 mt-0.5" style={{color: 'var(--accent-success)'}} fill="currentColor" viewBox="0 0 20 20">
@@ -997,66 +991,53 @@ export const Landing: React.FC = () => {
                     <span className="text-sm" style={{color: 'var(--text-secondary)'}}>{feature}</span>
                   </li>
                 ))}
-                {[
-                  'Style matching',
-                  'Unlimited generations',
-                  'Priority support',
-                  'Advanced customization'
-                ].map((feature, i) => (
-                  <li key={i} className="flex items-start gap-3 opacity-40">
-                    <span className="text-lg">❌</span>
-                    <span className="text-sm" style={{color: 'var(--text-secondary)'}}>{feature}</span>
-                  </li>
-                ))}
               </ul>
 
               <Link to="/signup" className="btn-secondary w-full py-3 text-center font-semibold block">
-                Start Free →
+                Get Started →
               </Link>
               <p className="text-xs text-center mt-3" style={{color: 'var(--text-muted)'}}>
-                No credit card needed. Really.
+                Start creating today
               </p>
             </div>
 
-            {/* Starter Plan */}
+            {/* Pro Plan */}
             <div className="card p-8 border-2 relative overflow-hidden" style={{borderColor: 'var(--accent-primary)', boxShadow: '0 0 40px rgba(239, 68, 68, 0.2)'}}>
               <div className="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold" 
                    style={{background: 'var(--accent-primary)', color: 'white'}}>
                 🔥 MOST POPULAR
               </div>
-              <div className="text-4xl mb-4">🚀</div>
-              <h3 className="text-2xl font-bold mb-2" style={{color: 'var(--text-primary)'}}>Starter</h3>
+              <div className="text-4xl mb-4">⚡</div>
+              <h3 className="text-2xl font-bold mb-2" style={{color: 'var(--text-primary)'}}>Pro</h3>
               <div className="flex items-baseline gap-2 mb-2">
                 <span className="text-5xl font-bold" style={{color: 'var(--text-primary)'}}>
-                  ${pricingToggle === 'monthly' ? '29' : '17'}
+                  ${pricingToggle === 'monthly' ? '40' : '28'}
                 </span>
                 <span style={{color: 'var(--text-muted)'}}>
                   /month {pricingToggle === 'annual' && '(billed annually)'}
                 </span>
               </div>
-              <p className="text-sm mb-6" style={{color: 'var(--text-muted)'}}>FOR SERIOUS CREATORS</p>
+              <p className="text-sm mb-6" style={{color: 'var(--text-muted)'}}>FOR POWER USERS</p>
               
               <p className="text-sm mb-6" style={{color: 'var(--text-secondary)'}}>
-                For creators who are serious about growth. Unlimited everything.
+                For creators who need advanced features and priority support.
               </p>
 
               <div className="px-3 py-2 rounded-lg mb-6 text-center text-sm font-medium" 
                    style={{background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-primary)'}}>
-                Save $350/month vs. hiring designers
+                {pricingToggle === 'monthly' ? '100' : '1,200'} thumbnails included
               </div>
 
               <ul className="space-y-3 mb-8">
                 {[
-                  'UNLIMITED AI-generated thumbnails',
-                  'All premium templates',
-                  'HD downloads (1280x720)',
-                  'Video snapshot tool (unlimited)',
-                  'Advanced text customization',
-                  'Style matching (upload references)',
-                  'Bulk generation (create 10+ at once)',
-                  'Priority support (< 2 hour response)',
-                  'Early access to new features',
-                  'Commercial license included'
+                  'Everything in Starter',
+                  'Selective Region Editing',
+                  'Priority Support',
+                  'Early Access to New Features',
+                  'Advanced AI Models',
+                  'Commercial License',
+                  'Batch Processing',
+                  'Custom Style Training'
                 ].map((feature, i) => (
                   <li key={i} className="flex items-start gap-3">
                     <svg className="w-5 h-5 flex-shrink-0 mt-0.5" style={{color: 'var(--accent-success)'}} fill="currentColor" viewBox="0 0 20 20">
@@ -1068,10 +1049,10 @@ export const Landing: React.FC = () => {
               </ul>
 
               <Link to="/signup" className="btn-primary w-full py-3 text-center font-semibold block">
-                Start 7-Day Free Trial →
+                Choose Pro →
               </Link>
               <p className="text-xs text-center mt-3" style={{color: 'var(--text-muted)'}}>
-                Cancel anytime. No questions asked.
+                Cancel anytime
               </p>
             </div>
           </div>
@@ -1086,7 +1067,7 @@ export const Landing: React.FC = () => {
               Zero Risk. Just Results.
             </h3>
             <p className="text-base mb-4 leading-relaxed max-w-2xl mx-auto" style={{color: 'var(--text-secondary)'}}>
-              Try Starter for 30 days. If you don't see more views, more clicks, or more growth — email us. We'll refund every penny. No forms. No hoops. No hard feelings.
+              Try any plan for 30 days. If you don't see more views, more clicks, or more growth — email us. We'll refund every penny. No forms. No hoops. No hard feelings.
             </p>
             <p className="text-xs" style={{color: 'var(--text-muted)'}}>
               We've issued 23 refunds out of 12,847 customers. That's a 99.82% satisfaction rate.
@@ -1157,18 +1138,18 @@ export const Landing: React.FC = () => {
           </h2>
           <p className="text-lg sm:text-xl mb-8 text-white/90 max-w-2xl mx-auto">
             Stop losing views to creators with worse content and better thumbnails.<br />
-            Start creating thumbnails that convert. Right now. For free.
+            Start creating professional thumbnails. Right now.
           </p>
           
           <Link to="/signup" className="inline-block px-8 py-4 text-lg font-semibold rounded-xl mb-4 transition-all hover:scale-105" 
                 style={{background: 'white', color: 'var(--accent-primary)'}}>
-            Create Your First Thumbnail — Free →
+            Get Started Now →
           </Link>
-          <p className="text-sm text-white/80 mb-8">No credit card required. 5 free thumbnails. Zero risk.</p>
+          <p className="text-sm text-white/80 mb-8">Cancel anytime. 30-day guarantee.</p>
 
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-white/90 mb-8">
             <div className="flex items-center gap-2">
-              <span>✅</span> No credit card needed
+              <span>✅</span> Get started instantly
             </div>
             <div className="flex items-center gap-2">
               <span>✅</span> Cancel anytime
@@ -1273,14 +1254,6 @@ export const Landing: React.FC = () => {
               <p className="text-xs mb-4" style={{color: 'var(--text-muted)'}}>
                 Built by creators, for creators. Because your content deserves better than boring thumbnails.
               </p>
-              <div className="flex gap-3">
-                {['🐦', '📘', '📸', '🎥', '💼'].map((emoji, i) => (
-                  <a key={i} href="#" className="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110" 
-                     style={{background: 'var(--bg-secondary)'}}>
-                    {emoji}
-                  </a>
-                ))}
-              </div>
             </div>
 
             {/* Product */}
@@ -1365,8 +1338,6 @@ export const Landing: React.FC = () => {
             <p>© {new Date().getFullYear()} Youbnail. All rights reserved. Built with ❤️ for creators.</p>
             <div className="flex items-center gap-4">
               <span>🔒 Secure by design</span>
-              <span>•</span>
-              <span>💳 Powered by Stripe</span>
             </div>
           </div>
         </div>
