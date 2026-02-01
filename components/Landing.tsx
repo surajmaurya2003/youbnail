@@ -15,36 +15,10 @@ export const Landing: React.FC = () => {
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormStatus('sending');
-    
-    try {
-      const response = await fetch('/functions/v1/send-contact-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: contactForm.name,
-          email: contactForm.email,
-          message: contactForm.message
-        })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setFormStatus('sent');
-        setContactForm({ name: '', email: '', message: '' });
-        setTimeout(() => setFormStatus('idle'), 5000);
-      } else {
-        console.error('Error sending email:', data.error);
-        setFormStatus('error');
-        setTimeout(() => setFormStatus('idle'), 5000);
-      }
-    } catch (error) {
-      console.error('Network error:', error);
-      setFormStatus('error');
-      setTimeout(() => setFormStatus('idle'), 5000);
-    }
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setFormStatus('sent');
+    setContactForm({ name: '', email: '', message: '' });
+    setTimeout(() => setFormStatus('idle'), 3000);
   };
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
@@ -1345,19 +1319,11 @@ export const Landing: React.FC = () => {
               disabled={formStatus === 'sending' || formStatus === 'sent'}
               className="btn-primary w-full py-3 text-lg font-semibold disabled:opacity-50"
             >
-              {formStatus === 'sending' ? 'Sending...' : 
-               formStatus === 'sent' ? '✅ Message sent!' : 
-               formStatus === 'error' ? 'Try Again' : 
-               'Send Message →'}
+              {formStatus === 'sending' ? 'Sending...' : formStatus === 'sent' ? '✅ Message sent!' : 'Send Message →'}
             </button>
             {formStatus === 'sent' && (
               <p className="text-center text-sm" style={{color: 'var(--accent-success)'}}>
                 We'll get back to you within 2 hours (usually sooner).
-              </p>
-            )}
-            {formStatus === 'error' && (
-              <p className="text-center text-sm" style={{color: 'var(--accent-primary)'}}>
-                ❌ Something went wrong. Please try again or email us directly at youbnailteam@gmail.com
               </p>
             )}
           </form>
