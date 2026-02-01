@@ -137,50 +137,32 @@ export const Landing: React.FC = () => {
     {
       rating: 5,
       text: 'Youbnail has completely changed how I create thumbnails. What used to take me hours in design software now takes minutes. The AI suggestions are spot on for my niche.',
-      name: 'Alex Chen',
-      channel: 'TechReviews',
-      subs: '45K',
-      badge: 'Saves hours weekly'
+      name: 'Alex Chen'
     },
     {
       rating: 5,
       text: 'I\'ve tried other thumbnail tools but nothing comes close to how intuitive Youbnail is. The video frame extraction feature alone is worth the subscription.',
-      name: 'Maria Rodriguez',
-      channel: 'FitLifestyle',
-      subs: '28K',
-      badge: 'Intuitive & powerful'
+      name: 'Maria Rodriguez'
     },
     {
       rating: 5,
       text: 'The difference in my video performance after switching to better thumbnails has been noticeable. Youbnail makes it so much easier to create professional-looking designs.',
-      name: 'Jordan Kim',
-      channel: 'GameTimeJK',
-      subs: '72K',
-      badge: 'Noticeable improvement'
+      name: 'Jordan Kim'
     },
     {
       rating: 5,
       text: 'Great tool for content creators who don\'t have design experience. The AI does most of the heavy lifting, and you can still customize to match your style.',
-      name: 'Sam Wilson',
-      channel: 'LearningSam',
-      subs: '19K',
-      badge: 'Perfect for beginners'
+      name: 'Sam Wilson'
     },
     {
       rating: 5,
       text: 'Finally, a thumbnail tool that understands YouTube. The aspect ratios are perfect, the quality is high, and it\'s designed specifically for creators like us.',
-      name: 'Casey Taylor',
-      channel: 'CaseyFitness',
-      subs: '33K',
-      badge: 'Built for YouTube'
+      name: 'Casey Taylor'
     },
     {
       rating: 5,
       text: 'The reference image feature is genius. I can show the AI the style I want, and it creates something similar but unique. Saves so much back and forth with designers.',
-      name: 'Riley Park',
-      channel: 'RileyTravels',
-      subs: '51K',
-      badge: 'Reference feature rocks'
+      name: 'Riley Park'
     }
   ];
 
@@ -827,16 +809,9 @@ export const Landing: React.FC = () => {
                   "{testimonial.text}"
                 </p>
                 <div className="border-t pt-4" style={{borderColor: 'var(--border-primary)'}}>
-                  <p className="text-sm font-bold mb-1" style={{color: 'var(--text-primary)'}}>
+                  <p className="text-sm font-bold" style={{color: 'var(--text-primary)'}}>
                     {testimonial.name}
                   </p>
-                  <p className="text-xs mb-2" style={{color: 'var(--text-muted)'}}>
-                    {testimonial.channel} • {testimonial.subs} subscribers
-                  </p>
-                  <div className="px-2 py-1 rounded text-xs font-medium inline-block" 
-                       style={{background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-primary)'}}>
-                    {testimonial.badge}
-                  </div>
                 </div>
               </div>
             ))}
