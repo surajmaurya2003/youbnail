@@ -10,14 +10,41 @@ export const Landing: React.FC = () => {
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterStatus, setNewsletterStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormStatus('sending');
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setFormStatus('sent');
-    setContactForm({ name: '', email: '', message: '' });
-    setTimeout(() => setFormStatus('idle'), 3000);
+    
+    try {
+      const response = await fetch('/functions/v1/send-contact-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: contactForm.name,
+          email: contactForm.email,
+          message: contactForm.message
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setFormStatus('sent');
+        setContactForm({ name: '', email: '', message: '' });
+        setTimeout(() => setFormStatus('idle'), 5000);
+      } else {
+        console.error('Error sending email:', data.error);
+        setFormStatus('error');
+        setTimeout(() => setFormStatus('idle'), 5000);
+      }
+    } catch (error) {
+      console.error('Network error:', error);
+      setFormStatus('error');
+      setTimeout(() => setFormStatus('idle'), 5000);
+    }
   };
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
@@ -249,7 +276,8 @@ export const Landing: React.FC = () => {
               </div>
             </nav>
             <button 
-              className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-full backdrop-blur-xl" 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden inline-flex h-12 w-12 items-center justify-center rounded-full backdrop-blur-xl transition-all duration-200 hover:scale-105" 
               style={{background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.15)'}}
               aria-label="Toggle menu">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color: 'var(--text-primary)'}}>
@@ -260,86 +288,134 @@ export const Landing: React.FC = () => {
         </div>
       </header>
 
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          
+          {/* Menu Panel */}
+          <div className="fixed top-0 right-0 h-full w-72 max-w-[90vw] shadow-xl" 
+               style={{background: 'var(--bg-primary)', borderLeft: '1px solid rgba(255, 255, 255, 0.1)'}}>
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b" style={{borderColor: 'rgba(255, 255, 255, 0.1)'}}>
+              <img 
+                src="https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/1.png" 
+                alt="Youbnail" 
+                className="h-8"
+              />
+              <button 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 rounded-lg transition-colors hover:bg-white/5 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color: 'var(--text-primary)'}}>
+                  <path d="M18 6L6 18" /><path d="M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-4 sm:p-6 space-y-2">
+              <button 
+                onClick={() => { scrollToSection('features'); setIsMobileMenuOpen(false); }}
+                className="block w-full text-left px-4 py-4 rounded-lg transition-colors hover:bg-white/5 min-h-[48px] text-base" 
+                style={{color: 'var(--text-primary)'}}>
+                Features
+              </button>
+              <button 
+                onClick={() => { scrollToSection('how-it-works'); setIsMobileMenuOpen(false); }}
+                className="block w-full text-left px-4 py-4 rounded-lg transition-colors hover:bg-white/5 min-h-[48px] text-base" 
+                style={{color: 'var(--text-primary)'}}>
+                How It Works
+              </button>
+              <button 
+                onClick={() => { scrollToSection('pricing'); setIsMobileMenuOpen(false); }}
+                className="block w-full text-left px-4 py-4 rounded-lg transition-colors hover:bg-white/5 min-h-[48px] text-base" 
+                style={{color: 'var(--text-primary)'}}>
+                Pricing
+              </button>
+              <button 
+                onClick={() => { scrollToSection('contact'); setIsMobileMenuOpen(false); }}
+                className="block w-full text-left px-4 py-4 rounded-lg transition-colors hover:bg-white/5 min-h-[48px] text-base" 
+                style={{color: 'var(--text-primary)'}}>
+                Contact
+              </button>
+              
+              <div className="pt-4 border-t space-y-3" style={{borderColor: 'rgba(255, 255, 255, 0.1)'}}>
+                <Link 
+                  to="/login" 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block w-full text-center px-4 py-4 rounded-lg transition-colors hover:bg-white/5 border min-h-[48px] flex items-center justify-center text-base" 
+                  style={{color: 'var(--text-primary)', borderColor: 'rgba(255, 255, 255, 0.2)'}}>
+                  Login
+                </Link>
+                <Link 
+                  to="/signup" 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block w-full text-center btn-primary px-4 py-4 font-semibold min-h-[48px] flex items-center justify-center text-base">
+                  Get Started
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 1. Hero Section */}
-      <section className="pt-32 pb-20 px-4 relative overflow-hidden">
+      <section className="pt-24 sm:pt-32 lg:pt-40 pb-12 sm:pb-16 lg:pb-20 px-4 sm:px-6 relative overflow-hidden">
         <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl" style={{background: 'var(--accent-primary)'}}></div>
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl" style={{background: '#dc2626'}}></div>
+          <div className="absolute top-1/4 left-1/4 w-64 sm:w-80 lg:w-96 h-64 sm:h-80 lg:h-96 rounded-full blur-3xl" style={{background: 'var(--accent-primary)'}}></div>
+          <div className="absolute bottom-1/4 right-1/4 w-64 sm:w-80 lg:w-96 h-64 sm:h-80 lg:h-96 rounded-full blur-3xl" style={{background: '#dc2626'}}></div>
         </div>
         
         <div className="max-w-7xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold mb-6" 
+          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold mb-6 sm:mb-8" 
                style={{background: 'var(--accent-light)', color: 'var(--accent-primary)', border: '1px solid rgba(239, 68, 68, 0.2)'}}>
             <span className="animate-pulse">●</span> NEW: AI now generates thumbnails in 3 seconds
           </div>
           
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 leading-tight" style={{color: 'var(--text-primary)'}}>
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 sm:mb-6 leading-tight px-2" style={{color: 'var(--text-primary)'}}>
             Stop Losing Views<br />to <span style={{background: 'linear-gradient(135deg, var(--accent-primary), #dc2626)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
               Boring Thumbnails
             </span>
           </h1>
           
-          <p className="text-xl sm:text-2xl mb-4 max-w-3xl mx-auto leading-relaxed" style={{color: 'var(--text-secondary)'}}>
-            The AI-powered thumbnail generator that turns your ideas into click-magnets in seconds.<br />
-            No design skills. No expensive software. Just results.
+          <p className="text-lg sm:text-xl lg:text-2xl mb-4 sm:mb-6 max-w-4xl mx-auto leading-relaxed px-4" style={{color: 'var(--text-secondary)'}}>
+            The AI-powered thumbnail generator that turns your ideas into click-magnets in seconds.<br className="hidden sm:block" />
+            <span className="block sm:inline">No design skills. No expensive software. Just results.</span>
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12 mt-8">
-            <Link to="/signup" className="btn-primary px-8 py-4 text-lg font-semibold w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center mb-8 sm:mb-12 mt-6 sm:mt-8 px-4">
+            <Link to="/signup" className="btn-primary px-6 sm:px-8 py-4 sm:py-4 text-base sm:text-lg font-semibold w-full sm:w-auto min-h-[48px] flex items-center justify-center">
               Get Started →
             </Link>
-            <button onClick={() => scrollToSection('video-demo')} className="btn-secondary px-8 py-4 text-lg font-semibold w-full sm:w-auto">
+            <button onClick={() => scrollToSection('video-demo')} className="btn-secondary px-6 sm:px-8 py-4 sm:py-4 text-base sm:text-lg font-semibold w-full sm:w-auto min-h-[48px] flex items-center justify-center">
               Watch 30-Sec Demo
             </button>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-sm" style={{color: 'var(--text-muted)'}}>
-            <div>⭐⭐⭐⭐⭐ Trusted by YouTube creators worldwide</div>
-            <div>•</div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 text-sm px-4" style={{color: 'var(--text-muted)'}}>
+            <div className="flex items-center gap-1">⭐⭐⭐⭐⭐ <span className="ml-2">Trusted by YouTube creators worldwide</span></div>
+            <div className="hidden sm:block">•</div>
             <div>Growing community of creators</div>
           </div>
         </div>
       </section>
 
-      {/* 2. Trust Bar */}
-      <section className="py-8 px-4 border-y" style={{background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)'}}>
-        <div className="max-w-7xl mx-auto">
-          <p className="text-center text-sm mb-4" style={{color: 'var(--text-muted)'}}>
-            Trusted by creators at
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-8 text-sm font-medium" style={{color: 'var(--text-muted)'}}>
-            <span>Gaming Channels</span>
-            <span>•</span>
-            <span>Tech Reviewers</span>
-            <span>•</span>
-            <span>Course Creators</span>
-            <span>•</span>
-            <span>Fitness Influencers</span>
-            <span>•</span>
-            <span>Finance Educators</span>
-            <span>•</span>
-            <span>Lifestyle Vloggers</span>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-6 mt-6 text-xs" style={{color: 'var(--text-muted)'}}>
-            <span>🔥 New thumbnails being created daily</span>
-            <span>⚡ Growing fast worldwide</span>
-          </div>
-        </div>
-      </section>
-
       {/* 3. Problem-Solution Section */}
-      <section className="py-20 px-4">
+      <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-center mb-16" style={{color: 'var(--text-primary)'}}>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-center mb-8 sm:mb-12 lg:mb-16 px-4" style={{color: 'var(--text-primary)'}}>
             The Thumbnail Struggle Ends Here
           </h2>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
             {/* Old Way */}
-            <div className="card p-8 border-2" style={{borderColor: '#dc2626', background: 'rgba(220, 38, 38, 0.05)'}}>
-              <div className="text-4xl mb-4">😰</div>
-              <h3 className="text-2xl font-bold mb-2" style={{color: 'var(--text-primary)'}}>The Old Way</h3>
-              <p className="text-lg mb-6" style={{color: 'var(--text-secondary)'}}>Hours wasted. Money drained. Views lost.</p>
+            <div className="card p-6 sm:p-8 border-2" style={{borderColor: '#dc2626', background: 'rgba(220, 38, 38, 0.05)'}}>
+              <div className="text-3xl sm:text-4xl mb-4">😰</div>
+              <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4" style={{color: 'var(--text-primary)'}}>The Old Way</h3>
+              <p className="text-base sm:text-lg mb-4 sm:mb-6" style={{color: 'var(--text-secondary)'}}>Hours wasted. Money drained. Views lost.</p>
               
               <ul className="space-y-3 mb-6">
                 {[
@@ -362,7 +438,7 @@ export const Landing: React.FC = () => {
             </div>
 
             {/* New Way */}
-            <div className="card p-8 border-2" style={{borderColor: 'var(--accent-primary)', background: 'rgba(239, 68, 68, 0.05)', boxShadow: '0 0 40px rgba(239, 68, 68, 0.1)'}}>
+            <div className="card p-6 sm:p-8 border-2" style={{borderColor: 'var(--accent-primary)', background: 'rgba(239, 68, 68, 0.05)', boxShadow: '0 0 40px rgba(239, 68, 68, 0.1)'}}>
               <h3 className="text-2xl font-bold mb-2" style={{color: 'var(--text-primary)'}}>The Youbnail Way</h3>
               <p className="text-lg mb-6" style={{color: 'var(--text-secondary)'}}>Click. Type. Download. Succeed.</p>
               
@@ -466,37 +542,71 @@ export const Landing: React.FC = () => {
       </section>
 
       {/* 6. Before/After Showcase */}
-      <section className="py-20 px-4" style={{background: 'var(--bg-secondary)'}}>
+      <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6" style={{background: 'var(--bg-secondary)'}}>
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4" style={{color: 'var(--text-primary)'}}>
+          <div className="text-center mb-8 sm:mb-12 lg:mb-16">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold mb-4 px-4" style={{color: 'var(--text-primary)'}}>
               Better Thumbnails, Better Performance
             </h2>
-            <p className="text-lg sm:text-xl" style={{color: 'var(--text-secondary)'}}>
+            <p className="text-base sm:text-lg lg:text-xl px-4" style={{color: 'var(--text-secondary)'}}>
               Professional thumbnails get more clicks than generic ones.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
             {[
-              { category: 'GAMING', description: 'Eye-catching thumbnails with high contrast and dynamic elements perform better than simple screenshots.' },
-              { category: 'TECH', description: 'Clean, professional designs with clear product focus outperform cluttered or amateur designs.' },
-              { category: 'LIFESTYLE', description: 'Bright, aspirational thumbnails with good composition draw more clicks than casual photos.' },
-              { category: 'EDUCATION', description: 'Clear, organized thumbnails with readable text perform better than text-heavy or unclear designs.' }
+              { 
+                category: 'GAMING', 
+                description: 'Eye-catching thumbnails with high contrast and dynamic elements perform better than simple screenshots.',
+                beforeImage: 'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/gaming%20before.png',
+                afterImage: 'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/gaming%20after.png'
+              },
+              { 
+                category: 'TECH', 
+                description: 'Clean, professional designs with clear product focus outperform cluttered or amateur designs.',
+                beforeImage: 'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/tech%20before.png',
+                afterImage: 'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/tech%20after.png'
+              },
+              { 
+                category: 'LIFESTYLE', 
+                description: 'Bright, aspirational thumbnails with good composition draw more clicks than casual photos.',
+                beforeImage: 'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/lifestyle%20before.png',
+                afterImage: 'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/lifestyle%20after.png'
+              },
+              { 
+                category: 'EDUCATION', 
+                description: 'Clear, organized thumbnails with readable text perform better than text-heavy or unclear designs.',
+                beforeImage: 'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/education%20before.png',
+                afterImage: 'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/education%20after.png'
+              }
             ].map((example, i) => (
-              <div key={i} className="card p-6">
+              <div key={i} className="card p-6 hover:shadow-lg transition-all duration-300">
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-xs font-bold tracking-wider" style={{color: 'var(--accent-primary)'}}>{example.category}</span>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <div className="aspect-video rounded-lg mb-2" style={{background: 'rgba(255, 255, 255, 0.05)', border: '2px dashed var(--border-primary)'}}></div>
-                    <p className="text-xs font-medium" style={{color: 'var(--text-muted)'}}>Generic thumbnail</p>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
+                  <div className="group">
+                    <div className="aspect-video rounded-lg mb-2 overflow-hidden border border-red-200 group-hover:scale-105 transition-transform duration-300">
+                      <img 
+                        src={example.beforeImage} 
+                        alt={`${example.category} generic thumbnail`}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                    <p className="text-xs font-medium text-center" style={{color: 'var(--text-muted)'}}>❌ Generic thumbnail</p>
                   </div>
-                  <div>
-                    <div className="aspect-video rounded-lg mb-2" style={{background: 'linear-gradient(135deg, var(--accent-primary), #dc2626)'}}></div>
-                    <p className="text-xs font-medium" style={{color: 'var(--accent-success)'}}>Professional design</p>
+                  <div className="group">
+                    <div className="aspect-video rounded-lg mb-2 overflow-hidden border border-green-200 group-hover:scale-105 transition-transform duration-300">
+                      <img 
+                        src={example.afterImage} 
+                        alt={`${example.category} professional thumbnail`}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                    <p className="text-xs font-medium text-center" style={{color: 'var(--accent-success)'}}>✅ Professional design</p>
                   </div>
                 </div>
                 
@@ -766,7 +876,14 @@ export const Landing: React.FC = () => {
             {/* Feature 1 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div className="order-2 lg:order-1">
-                <div className="aspect-video rounded-xl" style={{background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2))', border: '2px solid var(--border-primary)'}}></div>
+                <div className="rounded-xl overflow-hidden" style={{border: '2px solid var(--border-primary)'}}>
+                  <img 
+                    src="https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/The%20AI%20That%20Studied%20Successful%20Viral%20Thumbnails%20So%20You%20Don't%20Have%20To.gif"
+                    alt="The AI That Studied Successful Viral Thumbnails So You Don't Have To"
+                    className="w-full h-auto"
+                    loading="lazy"
+                  />
+                </div>
               </div>
               <div className="order-1 lg:order-2">
                 <div className="inline-block px-3 py-1 rounded-full text-xs font-bold mb-4" 
@@ -850,9 +967,10 @@ export const Landing: React.FC = () => {
               <div>
                 <div className="rounded-xl overflow-hidden" style={{border: '2px solid var(--border-primary)'}}>
                   <img 
-                    src="https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/Turn%20Any%20Video%20Frame%20Into%20a%20Scroll-Stopping%20Thumbnail%20in%204%20Clicks.gif"
+                    src="https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/Turn%20Any%20Video%20Frame%20Into%20a%20Scroll-Stopping%20Thumbnail%20in%204%20Clicks%20(1).gif"
                     alt="Turn Any Video Frame Into a Scroll-Stopping Thumbnail in 4 Clicks"
                     className="w-full h-auto"
+                    loading="lazy"
                   />
                 </div>
               </div>
@@ -861,7 +979,14 @@ export const Landing: React.FC = () => {
             {/* Feature 3 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div className="order-2 lg:order-1">
-                <div className="aspect-video rounded-xl" style={{background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2))', border: '2px solid var(--border-primary)'}}></div>
+                <div className="rounded-xl overflow-hidden" style={{border: '2px solid var(--border-primary)'}}>
+                  <img 
+                    src="https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/Clone%20Any%20Style.%20Keep%20Your%20Brand.%20Never%20Plagiarize..gif"
+                    alt="Clone Any Style. Keep Your Brand. Never Plagiarize."
+                    className="w-full h-auto"
+                    loading="lazy"
+                  />
+                </div>
               </div>
               <div className="order-1 lg:order-2">
                 <div className="inline-block px-3 py-1 rounded-full text-xs font-bold mb-4" 
@@ -919,18 +1044,18 @@ export const Landing: React.FC = () => {
       </section>
 
       {/* 12. Pricing */}
-      <section id="pricing" className="py-20 px-4" style={{background: 'var(--bg-secondary)'}}>
+      <section id="pricing" className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6" style={{background: 'var(--bg-secondary)'}}>
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-4">
-            <p className="text-xs font-bold tracking-wider" style={{color: 'var(--accent-primary)'}}>
+          <div className="text-center mb-3 sm:mb-4">
+            <p className="text-xs sm:text-sm font-bold tracking-wider px-4" style={{color: 'var(--accent-primary)'}}>
               TRANSPARENT PRICING, ZERO SURPRISES
             </p>
           </div>
-          <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4" style={{color: 'var(--text-primary)'}}>
+          <div className="text-center mb-8 sm:mb-12">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold mb-4 px-4" style={{color: 'var(--text-primary)'}}>
               Choose Your Growth Plan
             </h2>
-            <p className="text-lg sm:text-xl mb-8" style={{color: 'var(--text-secondary)'}}>
+            <p className="text-base sm:text-lg lg:text-xl mb-6 sm:mb-8 px-4" style={{color: 'var(--text-secondary)'}}>
               Simple pricing for serious creators. Choose your plan.
             </p>
 
@@ -953,9 +1078,9 @@ export const Landing: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 max-w-5xl mx-auto mb-12 sm:mb-16">
             {/* Starter Plan */}
-            <div className="card p-8 border-2" style={{borderColor: 'var(--border-primary)'}}>
+            <div className="card p-6 sm:p-8 border-2" style={{borderColor: 'var(--border-primary)'}}>
               <div className="text-4xl mb-4">🚀</div>
               <h3 className="text-2xl font-bold mb-2" style={{color: 'var(--text-primary)'}}>Starter</h3>
               <div className="flex items-baseline gap-2 mb-2">
@@ -1006,7 +1131,7 @@ export const Landing: React.FC = () => {
             </div>
 
             {/* Pro Plan */}
-            <div className="card p-8 border-2 relative overflow-hidden" style={{borderColor: 'var(--accent-primary)', boxShadow: '0 0 40px rgba(239, 68, 68, 0.2)'}}>
+            <div className="card p-6 sm:p-8 border-2 relative overflow-hidden" style={{borderColor: 'var(--accent-primary)', boxShadow: '0 0 40px rgba(239, 68, 68, 0.2)'}}>
               <div className="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold" 
                    style={{background: 'var(--accent-primary)', color: 'white'}}>
                 🔥 MOST POPULAR
@@ -1062,8 +1187,8 @@ export const Landing: React.FC = () => {
       </section>
 
       {/* 13. FAQ */}
-      <section className="py-20 px-4">
-        <div className="max-w-5xl mx-auto">
+      <section className="py-20 px-4" style={{background: 'var(--bg-secondary)'}}>
+        <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4" style={{color: 'var(--text-primary)'}}>
               Everything Else You're Wondering
@@ -1073,40 +1198,55 @@ export const Landing: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             {faqs.map((faq, i) => (
-              <div key={i} className="card">
+              <div key={i} className="card overflow-hidden transition-all duration-200 hover:shadow-lg" 
+                   style={{background: 'var(--bg-primary)', border: '1px solid var(--border-primary)'}}>
                 <button
                   onClick={() => setExpandedFaq(expandedFaq === i ? null : i)}
-                  className="w-full p-6 text-left flex items-start justify-between gap-4"
+                  className="w-full p-6 sm:p-8 text-left flex items-start justify-between gap-4 hover:bg-white/5 transition-colors"
                 >
-                  <span className="font-semibold text-sm" style={{color: 'var(--text-primary)'}}>
+                  <span className="font-semibold text-base sm:text-lg pr-4" style={{color: 'var(--text-primary)'}}>
                     {faq.q}
                   </span>
-                  <span className="text-2xl flex-shrink-0" style={{color: 'var(--accent-primary)'}}>
-                    {expandedFaq === i ? '−' : '+'}
-                  </span>
+                  <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-200" 
+                       style={{background: expandedFaq === i ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.1)'}}>
+                    <span className="text-lg sm:text-xl font-bold" 
+                          style={{color: expandedFaq === i ? 'white' : 'var(--accent-primary)'}}>
+                      {expandedFaq === i ? '−' : '+'}
+                    </span>
+                  </div>
                 </button>
                 {expandedFaq === i && (
-                  <div className="px-6 pb-6">
-                    <p className="text-sm leading-relaxed" style={{color: 'var(--text-secondary)'}}>
-                      {faq.a}
-                    </p>
+                  <div className="px-6 sm:px-8 pb-6 sm:pb-8 pt-0">
+                    <div className="border-t pt-6" style={{borderColor: 'var(--border-primary)'}}>
+                      <p className="text-base leading-relaxed" style={{color: 'var(--text-secondary)'}}>
+                        {faq.a}
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
             ))}
           </div>
 
-          <div className="text-center mt-12">
-            <h3 className="text-xl font-bold mb-2" style={{color: 'var(--text-primary)'}}>
-              Didn't find your answer?
-            </h3>
-            <p className="text-sm mb-6" style={{color: 'var(--text-secondary)'}}>
-              Our support team actually responds. Usually within 2 hours.
+          <div className="text-center mt-16">
+            <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full mb-6" 
+                 style={{background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)'}}>
+              <span className="text-2xl">💬</span>
+              <span className="font-semibold" style={{color: 'var(--accent-primary)'}}>
+                Didn't find your answer?
+              </span>
+            </div>
+            <p className="text-base mb-8 max-w-md mx-auto" style={{color: 'var(--text-secondary)'}}>
+              Our support team actually responds. Usually within 2 hours during business hours.
             </p>
-            <button onClick={() => scrollToSection('contact')} className="btn-primary px-6 py-3 text-base font-semibold">
-              Contact Support →
+            <button onClick={() => scrollToSection('contact')} 
+                    className="btn-primary px-6 sm:px-8 py-4 text-base sm:text-lg font-semibold inline-flex items-center justify-center gap-2 hover:scale-105 transition-transform min-h-[48px]">
+              Contact Support 
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 7h10v10" /><path d="M7 17 17 7" />
+              </svg>
             </button>
           </div>
         </div>
@@ -1205,11 +1345,19 @@ export const Landing: React.FC = () => {
               disabled={formStatus === 'sending' || formStatus === 'sent'}
               className="btn-primary w-full py-3 text-lg font-semibold disabled:opacity-50"
             >
-              {formStatus === 'sending' ? 'Sending...' : formStatus === 'sent' ? '✅ Message sent!' : 'Send Message →'}
+              {formStatus === 'sending' ? 'Sending...' : 
+               formStatus === 'sent' ? '✅ Message sent!' : 
+               formStatus === 'error' ? 'Try Again' : 
+               'Send Message →'}
             </button>
             {formStatus === 'sent' && (
               <p className="text-center text-sm" style={{color: 'var(--accent-success)'}}>
                 We'll get back to you within 2 hours (usually sooner).
+              </p>
+            )}
+            {formStatus === 'error' && (
+              <p className="text-center text-sm" style={{color: 'var(--accent-primary)'}}>
+                ❌ Something went wrong. Please try again or email us directly at youbnailteam@gmail.com
               </p>
             )}
           </form>
@@ -1263,11 +1411,12 @@ export const Landing: React.FC = () => {
             <div>
               <h4 className="font-semibold mb-4" style={{color: 'var(--text-primary)'}}>Resources</h4>
               <ul className="space-y-2 text-sm">
-                {['Blog', 'Tutorial Videos', 'Help Center', 'Community Forum'].map((item, i) => (
-                  <li key={i}>
-                    <a href="#" style={{color: 'var(--text-muted)'}} className="hover:underline">{item}</a>
-                  </li>
-                ))}
+                <li>
+                  <a href="https://docs.youbnail.com/" target="_blank" rel="noopener noreferrer" style={{color: 'var(--text-muted)'}} className="hover:underline">Documentation</a>
+                </li>
+                <li>
+                  <a href="https://docs.youbnail.com/" target="_blank" rel="noopener noreferrer" style={{color: 'var(--text-muted)'}} className="hover:underline">Help Center</a>
+                </li>
               </ul>
             </div>
 
@@ -1285,34 +1434,8 @@ export const Landing: React.FC = () => {
             {/* Newsletter */}
             <div>
               <h4 className="font-semibold mb-4" style={{color: 'var(--text-primary)'}}>Get Thumbnail Tips Weekly</h4>
-              <p className="text-xs mb-4" style={{color: 'var(--text-muted)'}}>
-                Join creators getting weekly tips on CTR optimization, YouTube growth, and thumbnail trends.
-              </p>
-              <form onSubmit={handleNewsletterSubmit} className="flex flex-col gap-2">
-                <input
-                  type="email"
-                  required
-                  value={newsletterEmail}
-                  onChange={(e) => setNewsletterEmail(e.target.value)}
-                  placeholder="Enter your email..."
-                  className="px-3 py-2 rounded-lg border text-sm outline-none"
-                  style={{background: 'var(--bg-secondary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)'}}
-                />
-                <button 
-                  type="submit"
-                  disabled={newsletterStatus === 'sending' || newsletterStatus === 'sent'}
-                  className="btn-primary py-2 text-sm font-semibold disabled:opacity-50"
-                >
-                  {newsletterStatus === 'sending' ? 'Subscribing...' : newsletterStatus === 'sent' ? '✓ Subscribed!' : 'Subscribe →'}
-                </button>
-              </form>
-              {newsletterStatus === 'sent' && (
-                <p className="text-xs mt-2" style={{color: 'var(--accent-success)'}}>
-                  Welcome to the community!
-                </p>
-              )}
-              <p className="text-xs mt-2" style={{color: 'var(--text-muted)'}}>
-                No spam. Unsubscribe anytime.
+              <p className="text-sm" style={{color: 'var(--text-muted)'}}>
+                Join creators getting weekly tips on CTR optimization, YouTube growth, and thumbnail trends. Coming soon!
               </p>
             </div>
           </div>

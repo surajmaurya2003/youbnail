@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "types": [
+      "https://esm.sh/@supabase/functions-js/src/edge-runtime.d.ts"
+    ],
+    "strictNullChecks": false
+  },
+  "importMap": "./import_map.json"
+}
