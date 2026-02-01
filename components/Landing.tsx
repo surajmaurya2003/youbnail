@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 export const Landing: React.FC = () => {
   const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
@@ -15,10 +16,32 @@ export const Landing: React.FC = () => {
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormStatus('sending');
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setFormStatus('sent');
-    setContactForm({ name: '', email: '', message: '' });
-    setTimeout(() => setFormStatus('idle'), 3000);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('send-contact-webhook', {
+        body: {
+          name: contactForm.name,
+          email: contactForm.email,
+          message: contactForm.message,
+        },
+      });
+
+      if (error) {
+        console.error('Error sending contact form:', error);
+        setFormStatus('error');
+        setTimeout(() => setFormStatus('idle'), 5000);
+        return;
+      }
+
+      console.log('Contact form sent successfully:', data);
+      setFormStatus('sent');
+      setContactForm({ name: '', email: '', message: '' });
+      setTimeout(() => setFormStatus('idle'), 5000);
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      setFormStatus('error');
+      setTimeout(() => setFormStatus('idle'), 5000);
+    }
   };
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
@@ -1319,11 +1342,19 @@ export const Landing: React.FC = () => {
               disabled={formStatus === 'sending' || formStatus === 'sent'}
               className="btn-primary w-full py-3 text-lg font-semibold disabled:opacity-50"
             >
-              {formStatus === 'sending' ? 'Sending...' : formStatus === 'sent' ? '✅ Message sent!' : 'Send Message →'}
+              {formStatus === 'sending' ? 'Sending...' : 
+               formStatus === 'sent' ? '✅ Message sent!' : 
+               formStatus === 'error' ? 'Try Again →' : 
+               'Send Message →'}
             </button>
             {formStatus === 'sent' && (
               <p className="text-center text-sm" style={{color: 'var(--accent-success)'}}>
                 We'll get back to you within 2 hours (usually sooner).
+              </p>
+            )}
+            {formStatus === 'error' && (
+              <p className="text-center text-sm" style={{color: '#dc2626'}}>
+                ❌ Something went wrong. Please try again or email us directly at youbnailteam@gmail.com
               </p>
             )}
           </form>
