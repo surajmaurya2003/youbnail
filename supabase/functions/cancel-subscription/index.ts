@@ -124,8 +124,8 @@ Deno.serve(async (req) => {
     }
 
     const dodoBaseUrl = Deno.env.get("DODO_API_MODE") === "live"
-      ? "https://live.dodopayments.com"
-      : "https://test.dodopayments.com";
+      ? "https://api.dodopayments.com"
+      : "https://api-sandbox.dodopayments.com";
 
     console.log("Attempting to cancel subscription:", {
       subscriptionId: user.subscription_id,
@@ -134,50 +134,50 @@ Deno.serve(async (req) => {
     });
 
     // Attempt to cancel via DodoPayments API
-    // Try different possible endpoints - DodoPayments API may vary
     let cancelResponse;
     let cancelError = null;
     
-    // Try endpoint 1: /subscriptions/{id}/cancel
+    // Try the correct DodoPayments v1 API endpoint
     try {
-      cancelResponse = await fetch(`${dodoBaseUrl}/subscriptions/${user.subscription_id}/cancel`, {
+      console.log("Calling DodoPayments API to cancel subscription...");
+      cancelResponse = await fetch(`${dodoBaseUrl}/v1/subscriptions/${user.subscription_id}/cancel`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${dodoApiKey}`,
         },
-        body: JSON.stringify({
-          customer_id: user.payment_customer_id,
-        }),
       });
-    } catch (err) {
-      cancelError = err;
-    }
-
-    // If first endpoint fails, try alternative: DELETE /subscriptions/{id}
-    if (!cancelResponse || !cancelResponse.ok) {
-      try {
-        cancelResponse = await fetch(`${dodoBaseUrl}/subscriptions/${user.subscription_id}`, {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${dodoApiKey}`,
-          },
-        });
-      } catch (err) {
-        cancelError = err;
+      
+      const responseText = await cancelResponse.text();
+      console.log("DodoPayments response:", {
+        status: cancelResponse.status,
+        statusText: cancelResponse.statusText,
+        body: responseText
+      });
+      
+      // If successful, we're done
+      if (cancelResponse.ok) {
+        console.log("Successfully cancelled subscription in DodoPayments");
+        return new Response(
+          JSON.stringify({ success: true, message: "Subscription cancelled successfully" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
       }
+      
+      // Store error for logging
+      cancelError = `${cancelResponse.status} ${cancelResponse.statusText}: ${responseText}`;
+      
+    } catch (err: any) {
+      console.error("DodoPayments API request failed:", err);
+      cancelError = err.message || String(err);
     }
 
-    if (!cancelResponse || !cancelResponse.ok) {
-      const errorText = cancelResponse ? await cancelResponse.text() : (cancelError?.message || "Network error");
-      console.error("Dodo cancel error:", cancelResponse?.status || "No response", errorText);
-      
-      // Even if DodoPayments API call fails, we can mark it as cancelled in our DB
-      // The webhook will handle the final status when DodoPayments processes it
-      console.log("Marking subscription as cancelled in database despite API error");
-      
-      await supabaseClient
+    // If DodoPayments API call fails, mark as cancelled in our DB anyway
+    // The user expects the subscription to be cancelled
+    console.error("DodoPayments cancellation failed:", cancelError);
+    console.log("Marking subscription as cancelled in database despite API error");
+    
+    await supabaseClient
         .from("users")
         .update({
           subscription_status: "cancelled",
@@ -188,22 +188,12 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true,
-          message: "Cancellation initiated. If the payment provider call failed, please contact support.",
-          warning: errorText 
+          message: "Subscription marked as cancelled in our system. Note: There was an issue communicating with the payment provider. Please verify cancellation in your DodoPayments dashboard or contact support.",
+          warning: cancelError 
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
-    }
-
-    // Let the webhook ultimately mark status as cancelled when it receives the event.
-    // Here we can pre-emptively mark subscription_status as 'cancelled_pending' or similar,
-    // but for now just return success to the client.
-
-    return new Response(
-      JSON.stringify({ success: true }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in cancel-subscription function:", error);
     return new Response(
       JSON.stringify({ error: error.message || "Internal server error" }),

@@ -136,6 +136,7 @@ const AppWithToast: React.FC = () => {
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [shareModalUrl, setShareModalUrl] = useState<string>('');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   
   // Current generation tracking
   const [currentGenerationId, setCurrentGenerationId] = useState<string | null>(null);
@@ -921,6 +922,59 @@ const AppWithToast: React.FC = () => {
     } catch (error) {
       console.error('Profile update failed');
       alert('Failed to update profile. Please try again.');
+    }
+  };
+
+  const handleEditButtonClick = () => {
+    if (!user) return;
+    
+    // Check if user is on starter or free plan
+    if (user.plan === 'starter' || user.plan === 'free') {
+      alert('👑 Edit feature is exclusively for Pro users!\n\nUpgrade to Pro to unlock powerful editing capabilities and transform your thumbnails like a king! 🎨✨');
+      // Optionally navigate to plans tab
+      navigateToTab('plans');
+      return;
+    }
+    
+    // Enable edit mode for Pro users
+    setIsEditMode(true);
+  };
+
+  const handleCancelSubscription = async () => {
+    if (isCancellingSubscription || !user) return;
+    
+    try {
+      setIsCancellingSubscription(true);
+      setShowCancelModal(false);
+      
+      const { data, error } = await supabase.functions.invoke('cancel-subscription', {
+        body: { userId: user.id },
+      });
+      
+      if (error) {
+        console.error('Subscription cancellation failed');
+        throw new Error(error.message || 'Failed to cancel subscription');
+      }
+      
+      if (data?.error) {
+        throw new Error(data.error || 'Failed to cancel subscription');
+      }
+      
+      alert('✅ Your cancellation request has been submitted. Your subscription will not renew.');
+      
+      // Refresh user data to show updated status
+      setTimeout(async () => {
+        const updatedUser = await userService.getUserProfile(user.id);
+        if (updatedUser) {
+          setUser(updatedUser);
+        }
+      }, 1000);
+    } catch (err: any) {
+      console.error('Subscription cancellation failed');
+      const errorMessage = err.message || err.error || 'Failed to cancel subscription. Please try again or contact support.';
+      alert(`❌ Error: ${errorMessage}`);
+    } finally {
+      setIsCancellingSubscription(false);
     }
   };
 
@@ -1721,11 +1775,8 @@ const AppWithToast: React.FC = () => {
                   <div className="flex gap-2">
                     {!isEditMode && generatedThumb && (
                       <button 
-                        onClick={() => setIsEditMode(true)} 
-                        disabled={user.plan === 'starter' || user.plan === 'free'}
-                        className={`btn-secondary text-sm ${
-                          (user.plan === 'starter' || user.plan === 'free') ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
+                        onClick={handleEditButtonClick} 
+                        className="btn-secondary text-sm"
                       >
                         Edit
                       </button>
@@ -2602,56 +2653,12 @@ const AppWithToast: React.FC = () => {
                         <button
                           className="btn-secondary w-full sm:w-auto text-sm px-4 py-2.5"
                           disabled={isCancellingSubscription || !user.subscription_id}
-                          onClick={async () => {
-                            if (isCancellingSubscription) return;
-                            
+                          onClick={() => {
                             if (!user.subscription_id) {
                               alert('No subscription ID found. Please contact support to cancel your subscription.');
                               return;
                             }
-                            
-                            const confirmed = confirm(
-                              'Are you sure you want to cancel your subscription?\n\n' +
-                              'You will keep access until the end of the current billing period, ' +
-                              'then your account will move to the Free plan.'
-                            );
-                            if (!confirmed) return;
-                            
-                            try {
-                              setIsCancellingSubscription(true);
-                              // Calling cancel-subscription function
-                              
-                              const { data, error } = await supabase.functions.invoke('cancel-subscription', {
-                                body: { userId: user.id },
-                              });
-                              
-                              // Process cancel subscription response
-                              
-                              if (error) {
-                                console.error('Subscription cancellation failed');
-                                throw new Error(error.message || 'Failed to cancel subscription');
-                              }
-                              
-                              if (data?.error) {
-                                throw new Error(data.error || 'Failed to cancel subscription');
-                              }
-                              
-                              alert('Your cancellation request has been submitted. Your subscription will not renew.');
-                              
-                              // Refresh user data to show updated status
-                              setTimeout(async () => {
-                                const updatedUser = await userService.getUserProfile(user.id);
-                                if (updatedUser) {
-                                  setUser(updatedUser);
-                                }
-                              }, 1000);
-                            } catch (err: any) {
-                              console.error('Subscription cancellation failed');
-                              const errorMessage = err.message || err.error || 'Failed to cancel subscription. Please try again or contact support.';
-                              alert(`Error: ${errorMessage}`);
-                            } finally {
-                              setIsCancellingSubscription(false);
-                            }
+                            setShowCancelModal(true);
                           }}
                         >
                           {isCancellingSubscription ? 'Cancelling…' : 'Cancel Subscription'}
@@ -2894,6 +2901,63 @@ const AppWithToast: React.FC = () => {
             </div>
           </div>
         </div>
+        
+        {/* Cancel Subscription Modal */}
+        {showCancelModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}>
+            <div 
+              className="w-full mx-4 max-w-md rounded-lg shadow-lg p-6"
+              style={{backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-primary)'}}
+            >
+              <div className="space-y-6">
+                <div className="text-center">
+                  <div className="mx-auto flex items-center justify-center w-12 h-12 rounded-full mb-4" style={{backgroundColor: 'rgba(239, 68, 68, 0.1)'}}>
+                    <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2" style={{color: 'var(--text-primary)'}}>
+                    Cancel Subscription?
+                  </h3>
+                  <p className="text-sm" style={{color: 'var(--text-secondary)'}}>
+                    Are you sure you want to cancel your subscription?
+                  </p>
+                </div>
+                
+                <div className="p-4 rounded-lg" style={{backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-primary)'}}>
+                  <p className="text-sm" style={{color: 'var(--text-secondary)'}}>
+                    You will keep access until the end of the current billing period, then your account will move to the Free plan.
+                  </p>
+                </div>
+                
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowCancelModal(false)}
+                    className="flex-1 p-3 rounded-lg transition-colors border text-sm font-medium"
+                    style={{
+                      backgroundColor: 'var(--bg-tertiary)',
+                      color: 'var(--text-secondary)',
+                      borderColor: 'var(--border-primary)'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCancelSubscription}
+                    disabled={isCancellingSubscription}
+                    className="flex-1 p-3 rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{
+                      backgroundColor: 'var(--accent-primary)',
+                      color: 'white'
+                    }}
+                  >
+                    {isCancellingSubscription ? 'Processing...' : 'OK'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Notifications Panel */}
         <NotificationsPanel

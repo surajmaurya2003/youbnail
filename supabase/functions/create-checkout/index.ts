@@ -268,11 +268,13 @@ Deno.serve(async (req) => {
     console.log('Creating checkout session with productId:', productId);
 
     // Create checkout session with DodoPayments
-    // Use test mode for development, live mode for production
-    const dodoBaseUrl = Deno.env.get('DODO_API_MODE') === 'live' 
-      ? 'https://live.dodopayments.com' 
-      : 'https://test.dodopayments.com';
+    // Use live mode for production, sandbox mode for testing
+    const dodoApiMode = Deno.env.get('DODO_API_MODE') || 'test';
+    const dodoBaseUrl = dodoApiMode === 'live' 
+      ? 'https://api.dodopayments.com' 
+      : 'https://api-sandbox.dodopayments.com';
     
+    console.log('DodoPayments API Mode:', dodoApiMode);
     console.log('Calling DodoPayments API at:', dodoBaseUrl);
     
     // Prepare checkout payload
