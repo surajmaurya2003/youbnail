@@ -31,20 +31,18 @@ Deno.serve(async (req) => {
   try {
     console.log('DELETE ACCOUNT: Request received, method:', req.method);
     
+    // Get environment variables
     // @ts-ignore - Deno env
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     // @ts-ignore - Deno env
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    // @ts-ignore - Deno env
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
 
     console.log('DELETE ACCOUNT: Environment variables check:', {
       hasUrl: !!supabaseUrl,
-      hasServiceKey: !!supabaseServiceKey,
-      hasAnonKey: !!supabaseAnonKey
+      hasServiceKey: !!supabaseServiceKey
     });
 
-    if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
+    if (!supabaseUrl || !supabaseServiceKey) {
       console.error('Missing environment variables');
       return new Response(
         JSON.stringify({ error: 'Server configuration error' }),
@@ -52,11 +50,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create Supabase client for user verification (with anon key)
-    const supabaseAnonClient = createClient(supabaseUrl, supabaseAnonKey);
-    
-    // Create Supabase client with the service role key for admin operations
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+    // Create admin Supabase client
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
 
     // Get the JWT from the Authorization header
     const authHeader = req.headers.get('Authorization');
@@ -72,14 +72,28 @@ Deno.serve(async (req) => {
 
     const token = authHeader.replace('Bearer ', '');
     console.log('DELETE ACCOUNT: Token extracted, length:', token.length);
+    console.log('DELETE ACCOUNT: Token prefix:', token.substring(0, 20));
 
-    // Verify the JWT token using the anon client first
-    const { data: { user: authUser }, error: authError } = await supabaseAnonClient.auth.getUser(token);
+    // Verify the JWT token using admin client (service role can verify any JWT)
+    console.log('DELETE ACCOUNT: About to verify JWT...');
+    let authUser;
+    let authError;
+    
+    try {
+      const result = await supabaseAdmin.auth.getUser(token);
+      authUser = result.data?.user;
+      authError = result.error;
+      console.log('DELETE ACCOUNT: JWT verification completed');
+    } catch (verifyError: any) {
+      console.error('DELETE ACCOUNT: JWT verification threw error:', verifyError);
+      authError = verifyError;
+    }
 
     console.log('DELETE ACCOUNT: JWT verification result:', {
       hasUser: !!authUser,
       userId: authUser?.id,
-      error: authError?.message
+      errorMessage: authError?.message,
+      hasError: !!authError
     });
 
     if (authError || !authUser) {
@@ -127,7 +141,7 @@ Deno.serve(async (req) => {
     }
 
     // Step 1: Get user data for cleanup
-    const { data: userData, error: userError } = await supabaseClient
+    const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
       .select('subscription_id, payment_customer_id, email')
       .eq('id', userId)
@@ -176,7 +190,7 @@ Deno.serve(async (req) => {
     // Step 3: Delete user storage files
     console.log('Cleaning up storage files...');
     try {
-      const { data: thumbnails } = await supabaseClient
+      const { data: thumbnails } = await supabaseAdmin
         .from('thumbnails')
         .select('storage_path')
         .eq('user_id', userId);
@@ -185,7 +199,7 @@ Deno.serve(async (req) => {
         console.log(`Deleting ${thumbnails.length} thumbnail files`);
         const storagePaths = thumbnails.map(t => t.storage_path);
         
-        const { error: storageError } = await supabaseClient.storage
+        const { error: storageError } = await supabaseAdmin.storage
           .from('thumbnails')
           .remove(storagePaths);
         
@@ -202,7 +216,7 @@ Deno.serve(async (req) => {
 
     // Step 4: Delete from auth.users (this will cascade to all related tables due to foreign key constraints)
     console.log('Deleting user account from auth...');
-    const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(userId);
+    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
     
     if (deleteError) {
       console.error('Failed to delete user from auth:', deleteError);
@@ -218,11 +232,16 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Account deletion error:', error);
+    console.error('Error type:', typeof error);
+    console.error('Error message:', error?.message);
+    console.error('Error stack:', error?.stack);
+    
     return new Response(JSON.stringify({ 
       error: 'Account deletion failed',
-      details: error.message 
+      details: error?.message || String(error),
+      type: typeof error
     }), {
       status: 500, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

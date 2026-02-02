@@ -957,6 +957,8 @@ const AppWithToast: React.FC = () => {
       }
       
       console.log('Session verified, calling delete-account function...');
+      console.log('User ID:', user.id);
+      console.log('Confirmation text:', deleteConfirmText);
       
       // Use Supabase functions.invoke which properly handles authentication
       const { data, error } = await supabase.functions.invoke('delete-account', {
@@ -967,9 +969,15 @@ const AppWithToast: React.FC = () => {
       });
       
       console.log('Function response:', { data, error });
+      console.log('Data type:', typeof data, 'Error type:', typeof error);
       
       if (error) {
-        console.error('Delete account error:', error);
+        console.error('Delete account error details:', {
+          message: error.message,
+          name: error.name,
+          context: error.context,
+          full: error
+        });
         throw new Error(error.message || 'Failed to delete account');
       }
       
