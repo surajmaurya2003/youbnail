@@ -1,12 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { authService } from '../services/supabaseService';
+
+// Declare Turnstile globals
+declare global {
+  interface Window {
+    turnstile: {
+      render: (element: string | Element, options: {
+        sitekey: string;
+        callback: (token: string) => void;
+        'error-callback'?: () => void;
+        'expired-callback'?: () => void;
+      }) => string;
+      reset: (widgetId?: string) => void;
+      remove: (widgetId?: string) => void;
+    };
+  }
+}
 
 export const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [email, setEmail] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const turnstileWidgetId = useRef<string | null>(null);
 
   const handleGoogleSignIn = async () => {
     setError(null);
@@ -20,10 +39,66 @@ export const Login: React.FC = () => {
     }
   };
 
+  // Initialize Turnstile when component mounts
+  useEffect(() => {
+    const initTurnstile = () => {
+      if (window.turnstile && turnstileRef.current && !turnstileWidgetId.current) {
+        try {
+          turnstileWidgetId.current = window.turnstile.render(turnstileRef.current, {
+            sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAACWKFGQYX53fcGA', // Your actual site key
+            callback: (token: string) => {
+              setTurnstileToken(token);
+              setError(null);
+            },
+            'error-callback': () => {
+              setError('CAPTCHA verification failed. Please try again.');
+              setTurnstileToken(null);
+            },
+            'expired-callback': () => {
+              setError('CAPTCHA expired. Please verify again.');
+              setTurnstileToken(null);
+            }
+          });
+        } catch (err) {
+          console.error('Turnstile initialization failed:', err);
+        }
+      }
+    };
+
+    // Wait for Turnstile script to load
+    if (window.turnstile) {
+      initTurnstile();
+    } else {
+      const checkTurnstile = setInterval(() => {
+        if (window.turnstile) {
+          clearInterval(checkTurnstile);
+          initTurnstile();
+        }
+      }, 100);
+
+      return () => clearInterval(checkTurnstile);
+    }
+
+    return () => {
+      if (turnstileWidgetId.current) {
+        try {
+          window.turnstile?.remove(turnstileWidgetId.current);
+        } catch (err) {
+          console.error('Error removing Turnstile widget:', err);
+        }
+      }
+    };
+  }, []);
+
   const handleMagicLinkLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
       setError('Please enter your email address.');
+      return;
+    }
+
+    if (!turnstileToken) {
+      setError('Please complete the CAPTCHA verification.');
       return;
     }
 
@@ -32,11 +107,22 @@ export const Login: React.FC = () => {
     setLoading(true);
     
     try {
-      await authService.signInWithMagicLink(email);
+      await authService.signInWithMagicLink(email, { captchaToken: turnstileToken });
       setMessage('Check your email for a magic link to sign in!');
       setEmail('');
+      
+      // Reset Turnstile after successful submission
+      if (turnstileWidgetId.current) {
+        window.turnstile?.reset(turnstileWidgetId.current);
+        setTurnstileToken(null);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to send magic link.');
+      // Reset Turnstile on error
+      if (turnstileWidgetId.current) {
+        window.turnstile?.reset(turnstileWidgetId.current);
+        setTurnstileToken(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -133,9 +219,19 @@ export const Login: React.FC = () => {
               disabled={loading}
             />
           </div>
+
+          {/* Turnstile CAPTCHA */}
+          <div className="mb-4">
+            <div 
+              ref={turnstileRef}
+              className="flex justify-center"
+              style={{ minHeight: '65px' }}
+            />
+          </div>
+
           <button
             type="submit"
-            disabled={loading || !email.trim()}
+            disabled={loading || !email.trim() || !turnstileToken}
             className="w-full py-3 px-4 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             style={{
               background: 'var(--accent-primary)',

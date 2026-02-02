@@ -55,7 +55,7 @@ export const authService = {
     if (error) throw error;
   },
 
-  async signInWithMagicLink(email: string) {
+  async signInWithMagicLink(email: string, options?: { captchaToken?: string }) {
     // Use environment variable if available, otherwise use current origin
     const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
     const { data, error } = await supabase.auth.signInWithOtp({
@@ -63,6 +63,7 @@ export const authService = {
       options: {
         shouldCreateUser: true,
         emailRedirectTo: `${appUrl}/`,
+        captchaToken: options?.captchaToken,
       },
     });
 
