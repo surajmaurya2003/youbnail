@@ -238,8 +238,12 @@ const AppWithToast: React.FC = () => {
           // Check if user profile exists, create if not (for OAuth users)
           let userProfile = await userService.getUserProfile(currentUser.id);
           if (!userProfile) {
-            // Create profile for OAuth users
-            const name = currentUser.user_metadata?.name || currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User';
+            // Create profile for OAuth users or users with missing profiles
+            const name = currentUser.user_metadata?.name || 
+                        currentUser.user_metadata?.full_name || 
+                        currentUser.email?.split('@')[0] || 
+                        'User';
+            console.log('Creating user profile with name:', name);
             await userService.updateUserProfile(currentUser.id, {
               id: currentUser.id,
               email: currentUser.email!,
@@ -305,6 +309,8 @@ const AppWithToast: React.FC = () => {
         if (!userProfile) {
           // Create profile for OAuth users
           const name = user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+          console.log('Creating OAuth user profile with name:', name);
+          console.log('User metadata:', user.user_metadata);
           await userService.updateUserProfile(user.id, {
             id: user.id,
             email: user.email!,

@@ -37,7 +37,11 @@ export const Signup: React.FC = () => {
     setLoading(true);
     
     try {
-      await authService.signInWithMagicLink(email);
+      await authService.signInWithMagicLink(email, {
+        data: {
+          name: name.trim()
+        }
+      });
       setMessage('Check your email for a magic link to complete signup!');
       setName('');
       setEmail('');
