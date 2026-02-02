@@ -49,30 +49,26 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get JWT token from Authorization header
+    // Create Supabase client with the service role key
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Get the JWT from the Authorization header
     const authHeader = req.headers.get('Authorization');
-    console.log('DELETE ACCOUNT: Auth header check:', {
-      hasAuthHeader: !!authHeader,
-      authHeaderStart: authHeader?.substring(0, 20)
-    });
+    console.log('DELETE ACCOUNT: Auth header present:', !!authHeader);
     
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.error('Missing or invalid authorization header');
+    if (!authHeader) {
+      console.error('No authorization header found');
       return new Response(
-        JSON.stringify({ error: 'Missing or invalid authorization header' }),
+        JSON.stringify({ error: 'Missing authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const jwt = authHeader.split(' ')[1];
-    console.log('DELETE ACCOUNT: JWT token extracted, length:', jwt?.length);
+    const token = authHeader.replace('Bearer ', '');
+    console.log('DELETE ACCOUNT: Token extracted, length:', token.length);
 
-    // Create Supabase client for JWT verification
-    const supabaseAuth = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Verify JWT token and get user
-    console.log('DELETE ACCOUNT: Verifying JWT token...');
-    const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser(jwt);
+    // Verify the JWT token using the Supabase client
+    const { data: { user: authUser }, error: authError } = await supabaseClient.auth.getUser(token);
 
     console.log('DELETE ACCOUNT: JWT verification result:', {
       hasUser: !!authUser,
@@ -123,8 +119,6 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
     // Step 1: Get user data for cleanup
     const { data: userData, error: userError } = await supabaseClient

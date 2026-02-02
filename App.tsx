@@ -958,16 +958,22 @@ const AppWithToast: React.FC = () => {
       
       console.log('Session verified, calling delete-account function...');
       console.log('Access token length:', session.access_token.length);
+      console.log('Access token first 20 chars:', session.access_token.substring(0, 20));
       
       // Use direct fetch with proper headers instead of supabase.functions.invoke
       const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`;
+      console.log('Function URL:', functionUrl);
+      
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
+      };
+      console.log('Request headers being sent:', Object.keys(headers));
+      
       const response = await fetch(functionUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
-        },
+        headers: headers,
         body: JSON.stringify({ 
           userId: user.id,
           confirmationText: deleteConfirmText
