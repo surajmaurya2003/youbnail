@@ -35,13 +35,16 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     // @ts-ignore - Deno env
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    // @ts-ignore - Deno env
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
 
     console.log('DELETE ACCOUNT: Environment variables check:', {
       hasUrl: !!supabaseUrl,
-      hasKey: !!supabaseServiceKey
+      hasServiceKey: !!supabaseServiceKey,
+      hasAnonKey: !!supabaseAnonKey
     });
 
-    if (!supabaseUrl || !supabaseServiceKey) {
+    if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
       console.error('Missing environment variables');
       return new Response(
         JSON.stringify({ error: 'Server configuration error' }),
@@ -49,7 +52,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create Supabase client with the service role key
+    // Create Supabase client for user verification (with anon key)
+    const supabaseAnonClient = createClient(supabaseUrl, supabaseAnonKey);
+    
+    // Create Supabase client with the service role key for admin operations
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get the JWT from the Authorization header
@@ -67,8 +73,8 @@ Deno.serve(async (req) => {
     const token = authHeader.replace('Bearer ', '');
     console.log('DELETE ACCOUNT: Token extracted, length:', token.length);
 
-    // Verify the JWT token using the Supabase client
-    const { data: { user: authUser }, error: authError } = await supabaseClient.auth.getUser(token);
+    // Verify the JWT token using the anon client first
+    const { data: { user: authUser }, error: authError } = await supabaseAnonClient.auth.getUser(token);
 
     console.log('DELETE ACCOUNT: JWT verification result:', {
       hasUser: !!authUser,

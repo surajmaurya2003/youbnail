@@ -957,38 +957,21 @@ const AppWithToast: React.FC = () => {
       }
       
       console.log('Session verified, calling delete-account function...');
-      console.log('Access token length:', session.access_token.length);
-      console.log('Access token first 20 chars:', session.access_token.substring(0, 20));
       
-      // Use direct fetch with proper headers instead of supabase.functions.invoke
-      const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`;
-      console.log('Function URL:', functionUrl);
-      
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
-      };
-      console.log('Request headers being sent:', Object.keys(headers));
-      
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify({ 
+      // Use Supabase functions.invoke which properly handles authentication
+      const { data, error } = await supabase.functions.invoke('delete-account', {
+        body: { 
           userId: user.id,
           confirmationText: deleteConfirmText
-        }),
+        }
       });
       
-      console.log('Response status:', response.status);
+      console.log('Function response:', { data, error });
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Delete account error:', errorData);
-        throw new Error(errorData.error || `Request failed with status ${response.status}`);
+      if (error) {
+        console.error('Delete account error:', error);
+        throw new Error(error.message || 'Failed to delete account');
       }
-      
-      const data = await response.json();
       
       if (data?.error) {
         console.error('Account deletion error:', data.error);
