@@ -42,7 +42,7 @@ export async function createCheckoutSession(
 
   // Call DodoPayments API to create checkout session
   // NOTE: Update this URL to match DodoPayments actual API endpoint
-  const response = await fetch('https://api.dodopayments.com/v1/checkout/sessions', {
+  const response = await fetch('https://test.dodopayments.com/v1/checkout/sessions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

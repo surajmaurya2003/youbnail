@@ -271,8 +271,8 @@ Deno.serve(async (req) => {
     // Use live mode for production, sandbox mode for testing
     const dodoApiMode = Deno.env.get('DODO_API_MODE') || 'test';
     const dodoBaseUrl = dodoApiMode === 'live' 
-      ? 'https://api.dodopayments.com' 
-      : 'https://api-sandbox.dodopayments.com';
+      ? 'https://live.dodopayments.com' 
+      : 'https://test.dodopayments.com';
     
     console.log('DodoPayments API Mode:', dodoApiMode);
     console.log('Calling DodoPayments API at:', dodoBaseUrl);

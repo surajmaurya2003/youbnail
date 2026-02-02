@@ -124,8 +124,8 @@ Deno.serve(async (req) => {
     }
 
     const dodoBaseUrl = Deno.env.get("DODO_API_MODE") === "live"
-      ? "https://api.dodopayments.com"
-      : "https://api-sandbox.dodopayments.com";
+      ? "https://live.dodopayments.com"
+      : "https://test.dodopayments.com";
 
     console.log("Attempting to cancel subscription:", {
       subscriptionId: user.subscription_id,
