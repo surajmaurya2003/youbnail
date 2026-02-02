@@ -123,14 +123,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    const dodoBaseUrl = Deno.env.get("DODO_API_MODE") === "live"
+    const dodoApiMode = Deno.env.get("DODO_API_MODE") || "test";
+    const dodoBaseUrl = dodoApiMode === "live"
       ? "https://live.dodopayments.com"
       : "https://test.dodopayments.com";
 
     console.log("Attempting to cancel subscription:", {
       subscriptionId: user.subscription_id,
       customerId: user.payment_customer_id,
+      dodoApiMode,
       dodoBaseUrl,
+      fullUrl: `${dodoBaseUrl}/v1/subscriptions/${user.subscription_id}/cancel`
     });
 
     // Attempt to cancel via DodoPayments API
