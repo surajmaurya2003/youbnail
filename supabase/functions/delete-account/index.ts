@@ -1,6 +1,7 @@
 // supabase/functions/delete-account/index.ts
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
+// @ts-ignore - Deno ESM import
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
@@ -10,13 +11,23 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 };
 
+// @ts-ignore - Deno runtime
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  if (req.method !== 'POST') {
+    return new Response(
+      JSON.stringify({ error: 'Method not allowed' }),
+      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
+    // @ts-ignore - Deno env
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    // @ts-ignore - Deno env
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!supabaseUrl || !supabaseServiceKey) {
@@ -36,7 +47,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const jwt = authHeader.replace('Bearer ', '');
+    const jwt = authHeader.split(' ')[1];
 
     // Create Supabase client for JWT verification
     const supabaseAuth = createClient(supabaseUrl, supabaseServiceKey);
@@ -113,6 +124,7 @@ Deno.serve(async (req) => {
         console.log('Cancelling subscription:', userData.subscription_id);
         
         // Call DodoPayments to cancel subscription
+        // @ts-ignore - Deno env
         const dodoApiKey = Deno.env.get('DODO_API_KEY');
         if (dodoApiKey) {
           const cancelResponse = await fetch('https://api.dodopayments.com/v1/subscriptions/cancel', {
