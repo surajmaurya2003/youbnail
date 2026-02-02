@@ -133,6 +133,8 @@ const AppWithToast: React.FC = () => {
   const [isUpdatingPlan, setIsUpdatingPlan] = useState<string | null>(null); // Track which plan is being updated
   const [isGoogleLinked, setIsGoogleLinked] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [lastGenerateTime, setLastGenerateTime] = useState<number>(0);
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [shareModalUrl, setShareModalUrl] = useState<string>('');
@@ -928,31 +930,22 @@ const AppWithToast: React.FC = () => {
   const handleDeleteAccount = async () => {
     if (!user || isDeletingAccount) return;
     
-    // Step 1: Warning dialog with detailed explanation
-    const confirmed = window.confirm(
-      'Are you absolutely sure you want to delete your account?\n\n' +
-      '⚠️ This action CANNOT be undone and will:\n' +
-      '• Cancel any active subscriptions immediately\n' +
-      '• Delete ALL your generated thumbnails\n' +
-      '• Remove your profile and usage history\n' +
-      '• Revoke access to your account permanently\n\n' +
-      'Click "OK" to continue or "Cancel" to abort this action.'
-    );
+    // Show the custom confirmation modal
+    setShowDeleteAccountModal(true);
+  };
+
+  const confirmDeleteAccount = async () => {
+    if (!user || isDeletingAccount) return;
     
-    if (!confirmed) return;
-    
-    // Step 2: Require typing "DELETE" for additional confirmation
-    const confirmText = window.prompt(
-      'Type "DELETE" in capital letters to confirm account deletion:'
-    );
-    
-    if (confirmText !== 'DELETE') {
+    // Validate confirmation text
+    if (deleteConfirmText !== 'DELETE') {
       alert('Account deletion cancelled. You must type "DELETE" exactly to confirm.');
       return;
     }
     
     try {
       setIsDeletingAccount(true);
+      setShowDeleteAccountModal(false);
       
       console.log('Starting account deletion process...');
       
@@ -960,7 +953,7 @@ const AppWithToast: React.FC = () => {
       const { data, error } = await supabase.functions.invoke('delete-account', {
         body: { 
           userId: user.id,
-          confirmationText: confirmText
+          confirmationText: deleteConfirmText
         },
       });
       
@@ -993,7 +986,13 @@ const AppWithToast: React.FC = () => {
       alert(`Failed to delete account: ${error.message || 'Unknown error'}. Please contact support if this issue persists.`);
     } finally {
       setIsDeletingAccount(false);
+      setDeleteConfirmText('');
     }
+  };
+
+  const cancelDeleteAccount = () => {
+    setShowDeleteAccountModal(false);
+    setDeleteConfirmText('');
   };
 
   const handleReferenceFile = (file?: File | null) => {
@@ -3022,6 +3021,93 @@ const AppWithToast: React.FC = () => {
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Delete Account Confirmation Modal */}
+        <div className={`fixed inset-0 z-50 flex items-center justify-center ${showDeleteAccountModal ? '' : 'hidden'}`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}>
+          <div 
+            className="w-full mx-4 max-w-md rounded-lg shadow-lg p-6"
+            style={{backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-primary)'}}
+          >
+            <div className="space-y-6">
+              <div className="text-center">
+                <div className="mx-auto flex items-center justify-center w-12 h-12 rounded-full mb-4" style={{backgroundColor: 'rgba(239, 68, 68, 0.1)'}}>
+                  <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold mb-2" style={{color: 'var(--text-primary)'}}>Delete Account</h3>
+                <p className="text-sm mb-4" style={{color: 'var(--text-secondary)'}}>
+                  Are you absolutely sure you want to delete your account?
+                </p>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="p-4 rounded-lg" style={{backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-primary)'}}>
+                  <h4 className="text-sm font-medium mb-3 flex items-center gap-2" style={{color: 'var(--text-primary)'}}>
+                    ⚠️ This action CANNOT be undone and will:
+                  </h4>
+                  <ul className="space-y-2 text-sm" style={{color: 'var(--text-secondary)'}}>
+                    <li className="flex items-center gap-2">
+                      <span style={{color: 'var(--text-muted)'}}>•</span>
+                      Cancel any active subscriptions immediately
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span style={{color: 'var(--text-muted)'}}>•</span>
+                      Delete ALL your generated thumbnails
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span style={{color: 'var(--text-muted)'}}>•</span>
+                      Remove your profile and usage history
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span style={{color: 'var(--text-muted)'}}>•</span>
+                      Revoke access to your account permanently
+                    </li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{color: 'var(--text-primary)'}}>
+                    Type "DELETE" to confirm account deletion:
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder="Type DELETE here"
+                    className="w-full p-3 rounded-lg border text-sm"
+                    style={{
+                      backgroundColor: 'var(--bg-secondary)',
+                      borderColor: 'var(--border-primary)',
+                      color: 'var(--text-primary)'
+                    }}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={cancelDeleteAccount}
+                  className="flex-1 p-3 rounded-lg transition-colors border text-sm font-medium"
+                  style={{
+                    backgroundColor: 'var(--bg-tertiary)',
+                    color: 'var(--text-secondary)',
+                    borderColor: 'var(--border-primary)'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteAccount}
+                  disabled={isDeletingAccount || deleteConfirmText !== 'DELETE'}
+                  className="flex-1 p-3 rounded-lg transition-colors text-sm font-medium bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white"
+                >
+                  {isDeletingAccount ? 'Deleting...' : 'Delete Account'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

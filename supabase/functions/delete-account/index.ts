@@ -13,11 +13,15 @@ const corsHeaders = {
 
 // @ts-ignore - Deno runtime
 Deno.serve(async (req) => {
+  console.log('DELETE ACCOUNT FUNCTION CALLED - Method:', req.method, 'URL:', req.url);
+  
   if (req.method === 'OPTIONS') {
+    console.log('DELETE ACCOUNT: Handling OPTIONS request');
     return new Response('ok', { headers: corsHeaders });
   }
 
   if (req.method !== 'POST') {
+    console.log('DELETE ACCOUNT: Invalid method:', req.method);
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
       { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -25,10 +29,17 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log('DELETE ACCOUNT: Request received, method:', req.method);
+    
     // @ts-ignore - Deno env
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     // @ts-ignore - Deno env
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    console.log('DELETE ACCOUNT: Environment variables check:', {
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseServiceKey
+    });
 
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('Missing environment variables');
@@ -40,7 +51,13 @@ Deno.serve(async (req) => {
 
     // Get JWT token from Authorization header
     const authHeader = req.headers.get('Authorization');
+    console.log('DELETE ACCOUNT: Auth header check:', {
+      hasAuthHeader: !!authHeader,
+      authHeaderStart: authHeader?.substring(0, 20)
+    });
+    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error('Missing or invalid authorization header');
       return new Response(
         JSON.stringify({ error: 'Missing or invalid authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -48,12 +65,20 @@ Deno.serve(async (req) => {
     }
 
     const jwt = authHeader.split(' ')[1];
+    console.log('DELETE ACCOUNT: JWT token extracted, length:', jwt?.length);
 
     // Create Supabase client for JWT verification
     const supabaseAuth = createClient(supabaseUrl, supabaseServiceKey);
 
     // Verify JWT token and get user
+    console.log('DELETE ACCOUNT: Verifying JWT token...');
     const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser(jwt);
+
+    console.log('DELETE ACCOUNT: JWT verification result:', {
+      hasUser: !!authUser,
+      userId: authUser?.id,
+      error: authError?.message
+    });
 
     if (authError || !authUser) {
       console.error('JWT verification failed:', authError);
