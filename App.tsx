@@ -957,22 +957,32 @@ const AppWithToast: React.FC = () => {
       }
       
       console.log('Session verified, calling delete-account function...');
+      console.log('Access token length:', session.access_token.length);
       
-      // Call delete-account edge function with explicit headers
-      const { data, error } = await supabase.functions.invoke('delete-account', {
+      // Use direct fetch with proper headers instead of supabase.functions.invoke
+      const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`;
+      const response = await fetch(functionUrl, {
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
-        body: { 
+        body: JSON.stringify({ 
           userId: user.id,
           confirmationText: deleteConfirmText
-        },
+        }),
       });
       
-      if (error) {
-        console.error('Account deletion failed:', error);
-        throw new Error(error.message || 'Failed to delete account');
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Delete account error:', errorData);
+        throw new Error(errorData.error || `Request failed with status ${response.status}`);
       }
+      
+      const data = await response.json();
       
       if (data?.error) {
         console.error('Account deletion error:', data.error);
