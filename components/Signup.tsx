@@ -1,22 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { authService } from '../services/supabaseService';
-
-// Declare Turnstile globals
-declare global {
-  interface Window {
-    turnstile: {
-      render: (element: string | Element, options: {
-        sitekey: string;
-        callback: (token: string) => void;
-        'error-callback'?: () => void;
-        'expired-callback'?: () => void;
-      }) => string;
-      reset: (widgetId?: string) => void;
-      remove: (widgetId?: string) => void;
-    };
-  }
-}
 
 export const Signup: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -24,9 +8,6 @@ export const Signup: React.FC = () => {
   const [message, setMessage] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-  const turnstileRef = useRef<HTMLDivElement>(null);
-  const turnstileWidgetId = useRef<string | null>(null);
 
   const handleGoogleSignUp = async () => {
     setError(null);
@@ -40,85 +21,6 @@ export const Signup: React.FC = () => {
     }
   };
 
-  // Initialize Turnstile when component mounts
-  useEffect(() => {
-    console.log('Turnstile site key:', import.meta.env.VITE_TURNSTILE_SITE_KEY);
-    
-    const initTurnstile = () => {
-      if (window.turnstile && turnstileRef.current && !turnstileWidgetId.current) {
-        console.log('Initializing Turnstile widget...');
-        try {
-          const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAACWKFGQYX53fcGA';
-          console.log('Using site key:', siteKey);
-          
-          turnstileWidgetId.current = window.turnstile.render(turnstileRef.current, {
-            sitekey: siteKey,
-            callback: (token: string) => {
-              console.log('Turnstile callback received:', token ? 'Token received' : 'No token');
-              setTurnstileToken(token);
-              setError(null);
-            },
-            'error-callback': () => {
-              console.error('Turnstile error callback triggered');
-              setError('CAPTCHA verification failed. Please try again.');
-              setTurnstileToken(null);
-            },
-            'expired-callback': () => {
-              console.log('Turnstile expired callback triggered');
-              setError('CAPTCHA expired. Please verify again.');
-              setTurnstileToken(null);
-            }
-          });
-          console.log('Turnstile widget initialized with ID:', turnstileWidgetId.current);
-        } catch (err) {
-          console.error('Turnstile initialization failed:', err);
-          setError('CAPTCHA failed to load. Please refresh the page.');
-        }
-      } else {
-        console.log('Turnstile not ready yet. Window.turnstile:', !!window.turnstile, 'Ref:', !!turnstileRef.current, 'Widget exists:', !!turnstileWidgetId.current);
-      }
-    };
-
-    // Wait for Turnstile script to load
-    if (window.turnstile) {
-      console.log('Turnstile already available');
-      initTurnstile();
-    } else {
-      console.log('Waiting for Turnstile to load...');
-      const checkTurnstile = setInterval(() => {
-        if (window.turnstile) {
-          console.log('Turnstile loaded!');
-          clearInterval(checkTurnstile);
-          initTurnstile();
-        }
-      }, 100);
-
-      // Timeout after 10 seconds
-      setTimeout(() => {
-        if (!window.turnstile) {
-          console.error('Turnstile failed to load after 10 seconds');
-          clearInterval(checkTurnstile);
-          setError('CAPTCHA failed to load. Please refresh the page.');
-        }
-      }, 10000);
-
-      return () => {
-        clearInterval(checkTurnstile);
-      };
-    }
-
-    return () => {
-      if (turnstileWidgetId.current && window.turnstile) {
-        try {
-          window.turnstile.remove(turnstileWidgetId.current);
-          console.log('Turnstile widget removed');
-        } catch (err) {
-          console.error('Error removing Turnstile widget:', err);
-        }
-      }
-    };
-  }, []);
-
   const handleMagicLinkSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
@@ -130,35 +32,17 @@ export const Signup: React.FC = () => {
       return;
     }
 
-    // Temporarily allow submission without CAPTCHA for testing
-    if (!turnstileToken) {
-      console.warn('No CAPTCHA token available, proceeding anyway for testing');
-    }
-
     setError(null);
     setMessage(null);
     setLoading(true);
     
     try {
-      // Pass captcha token if available
-      const options = turnstileToken ? { captchaToken: turnstileToken } : {};
-      await authService.signInWithMagicLink(email, options);
+      await authService.signInWithMagicLink(email);
       setMessage('Check your email for a magic link to complete signup!');
       setName('');
       setEmail('');
-      
-      // Reset Turnstile after successful submission
-      if (turnstileWidgetId.current && window.turnstile) {
-        window.turnstile.reset(turnstileWidgetId.current);
-        setTurnstileToken(null);
-      }
     } catch (err: any) {
       setError(err.message || 'Failed to send magic link.');
-      // Reset Turnstile on error
-      if (turnstileWidgetId.current && window.turnstile) {
-        window.turnstile.reset(turnstileWidgetId.current);
-        setTurnstileToken(null);
-      }
     } finally {
       setLoading(false);
     }
@@ -268,31 +152,6 @@ export const Signup: React.FC = () => {
               }}
               disabled={loading}
             />
-          </div>
-
-          {/* Turnstile CAPTCHA */}
-          <div className="mb-4">
-            <div 
-              ref={turnstileRef}
-              className="flex justify-center"
-              style={{ 
-                minHeight: '65px',
-                border: '1px solid #333', // Temporary debug border
-                borderRadius: '8px',
-                padding: '10px'
-              }}
-            >
-              {!window.turnstile && (
-                <div className="text-center text-sm" style={{color: 'var(--text-secondary)'}}>
-                  Loading CAPTCHA...
-                </div>
-              )}
-            </div>
-            {process.env.NODE_ENV === 'development' && (
-              <div className="text-xs mt-2" style={{color: 'var(--text-muted)'}}>
-                Debug: Site key = {import.meta.env.VITE_TURNSTILE_SITE_KEY || 'Not set'}
-              </div>
-            )}
           </div>
 
           <button

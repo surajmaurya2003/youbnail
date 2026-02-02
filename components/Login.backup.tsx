@@ -20,6 +20,57 @@ export const Login: React.FC = () => {
     }
   };
 
+  // Initialize Turnstile when component mounts
+  useEffect(() => {
+    const initTurnstile = () => {
+      if (window.turnstile && turnstileRef.current && !turnstileWidgetId.current) {
+        try {
+          turnstileWidgetId.current = window.turnstile.render(turnstileRef.current, {
+            sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAACWKFGQYX53fcGA', // Your actual site key
+            callback: (token: string) => {
+              setTurnstileToken(token);
+              setError(null);
+            },
+            'error-callback': () => {
+              setError('CAPTCHA verification failed. Please try again.');
+              setTurnstileToken(null);
+            },
+            'expired-callback': () => {
+              setError('CAPTCHA expired. Please verify again.');
+              setTurnstileToken(null);
+            }
+          });
+        } catch (err) {
+          console.error('Turnstile initialization failed:', err);
+        }
+      }
+    };
+
+    // Wait for Turnstile script to load
+    if (window.turnstile) {
+      initTurnstile();
+    } else {
+      const checkTurnstile = setInterval(() => {
+        if (window.turnstile) {
+          clearInterval(checkTurnstile);
+          initTurnstile();
+        }
+      }, 100);
+
+      return () => clearInterval(checkTurnstile);
+    }
+
+    return () => {
+      if (turnstileWidgetId.current) {
+        try {
+          window.turnstile?.remove(turnstileWidgetId.current);
+        } catch (err) {
+          console.error('Error removing Turnstile widget:', err);
+        }
+      }
+    };
+  }, []);
+
   const handleMagicLinkLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
@@ -27,16 +78,34 @@ export const Login: React.FC = () => {
       return;
     }
 
+    // CAPTCHA is optional
+    if (!turnstileToken) {
+      console.warn('No CAPTCHA token available for login, proceeding anyway');
+    }
+
     setError(null);
     setMessage(null);
     setLoading(true);
     
     try {
-      await authService.signInWithMagicLink(email);
+      // Pass captcha token if available
+      const options = turnstileToken ? { captchaToken: turnstileToken } : {};
+      await authService.signInWithMagicLink(email, options);
       setMessage('Check your email for a magic link to sign in!');
       setEmail('');
+      
+      // Reset Turnstile after successful submission
+      if (turnstileWidgetId.current && window.turnstile) {
+        window.turnstile.reset(turnstileWidgetId.current);
+        setTurnstileToken(null);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to send magic link.');
+      // Reset Turnstile on error
+      if (turnstileWidgetId.current) {
+        window.turnstile?.reset(turnstileWidgetId.current);
+        setTurnstileToken(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -68,8 +137,12 @@ export const Login: React.FC = () => {
                 <Link to="/" className="px-3 py-2 text-sm font-medium transition-colors rounded-full hover:bg-white/5" style={{color: 'var(--text-secondary)'}}>
                   Home
                 </Link>
-                <Link to="/signup" className="ml-1 px-3 py-2 text-sm font-medium transition-colors rounded-full hover:bg-white/5" style={{color: 'var(--text-secondary)'}}>
-                  Sign up
+                <Link to="/signup" className="ml-1 btn-primary px-4 py-2 text-sm font-semibold inline-flex items-center gap-2">
+                  Sign Up Free
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M7 7h10v10" />
+                    <path d="M7 17 17 7" />
+                  </svg>
                 </Link>
               </div>
             </nav>
@@ -127,6 +200,15 @@ export const Login: React.FC = () => {
                 color: 'var(--text-primary)'
               }}
               disabled={loading}
+            />
+          </div>
+
+          {/* Turnstile CAPTCHA */}
+          <div className="mb-4">
+            <div 
+              ref={turnstileRef}
+              className="flex justify-center"
+              style={{ minHeight: '65px' }}
             />
           </div>
 
@@ -211,9 +293,7 @@ export const Login: React.FC = () => {
               <Link to="/terms" className="hover:underline">Terms</Link>
               <Link to="/refund" className="hover:underline">Refund Policy</Link>
             </div>
-            <div className="flex items-center gap-4 text-sm" style={{color: 'var(--text-muted)'}}>
-              © 2026 Youbnail. All rights reserved.
-            </div>
+            <p className="text-sm" style={{color: 'var(--text-muted)'}}>© {new Date().getFullYear()} Youbnail. All rights reserved.</p>
           </div>
         </div>
       </footer>
