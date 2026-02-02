@@ -132,6 +132,7 @@ const AppWithToast: React.FC = () => {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annually'>('annually');
   const [isUpdatingPlan, setIsUpdatingPlan] = useState<string | null>(null); // Track which plan is being updated
   const [isGoogleLinked, setIsGoogleLinked] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [lastGenerateTime, setLastGenerateTime] = useState<number>(0);
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [shareModalUrl, setShareModalUrl] = useState<string>('');
@@ -921,6 +922,77 @@ const AppWithToast: React.FC = () => {
     } catch (error) {
       console.error('Profile update failed');
       alert('Failed to update profile. Please try again.');
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user || isDeletingAccount) return;
+    
+    // Step 1: Warning dialog with detailed explanation
+    const confirmed = window.confirm(
+      'Are you absolutely sure you want to delete your account?\n\n' +
+      '⚠️ This action CANNOT be undone and will:\n' +
+      '• Cancel any active subscriptions immediately\n' +
+      '• Delete ALL your generated thumbnails\n' +
+      '• Remove your profile and usage history\n' +
+      '• Revoke access to your account permanently\n\n' +
+      'Click "OK" to continue or "Cancel" to abort this action.'
+    );
+    
+    if (!confirmed) return;
+    
+    // Step 2: Require typing "DELETE" for additional confirmation
+    const confirmText = window.prompt(
+      'Type "DELETE" in capital letters to confirm account deletion:'
+    );
+    
+    if (confirmText !== 'DELETE') {
+      alert('Account deletion cancelled. You must type "DELETE" exactly to confirm.');
+      return;
+    }
+    
+    try {
+      setIsDeletingAccount(true);
+      
+      console.log('Starting account deletion process...');
+      
+      // Call delete-account edge function
+      const { data, error } = await supabase.functions.invoke('delete-account', {
+        body: { 
+          userId: user.id,
+          confirmationText: confirmText
+        },
+      });
+      
+      if (error) {
+        console.error('Account deletion failed:', error);
+        throw new Error(error.message || 'Failed to delete account');
+      }
+      
+      if (data?.error) {
+        console.error('Account deletion error:', data.error);
+        throw new Error(data.error || 'Failed to delete account');
+      }
+      
+      console.log('Account deletion successful');
+      
+      // Sign out and clear state
+      await authService.signOut();
+      setIsAuthenticated(false);
+      setUser(null);
+      setHistory([]);
+      setUsageHistory([]);
+      
+      alert('Your account has been permanently deleted. Thank you for using ThumbPro AI.');
+      
+      // Redirect to landing page
+      window.location.href = '/';
+      
+    } catch (error: any) {
+      console.error('Account deletion failed:', error);
+      alert(`Failed to delete account: ${error.message || 'Unknown error'}. Please contact support if this issue persists.`);
+    } finally {
+      setIsDeletingAccount(false);
     }
   };
 
@@ -2690,6 +2762,65 @@ const AppWithToast: React.FC = () => {
                 >
                   Manage Subscription →
                 </button>
+              </div>
+            </div>
+
+            {/* Delete Account Card */}
+            <div className="card p-4 sm:p-6">
+              <div className="border rounded-lg p-6" style={{borderColor: 'var(--border-primary)'}}>
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold mb-2" style={{color: 'var(--text-primary)'}}>
+                      Delete Account
+                    </h3>
+                    <p className="text-xs sm:text-sm leading-relaxed mb-4" style={{color: 'var(--text-secondary)'}}>
+                      Permanently delete your account and all associated data. This action cannot be undone and will:
+                    </p>
+                    <ul className="text-xs sm:text-sm space-y-1 mb-4" style={{color: 'var(--text-secondary)'}}>
+                      <li className="flex items-center gap-2">
+                        <span style={{color: 'var(--text-muted)'}}>•</span>
+                        Cancel any active subscriptions immediately
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span style={{color: 'var(--text-muted)'}}>•</span>
+                        Delete all your generated thumbnails
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span style={{color: 'var(--text-muted)'}}>•</span>
+                        Remove your profile and usage history
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span style={{color: 'var(--text-muted)'}}>•</span>
+                        Revoke access to your account permanently
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={isDeletingAccount}
+                  className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center gap-2"
+                >
+                  {isDeletingAccount && (
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  {isDeletingAccount ? 'Deleting Account...' : 'Delete Account'}
+                </button>
+                
+                <div className="mt-4 p-3 rounded-lg" style={{background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)'}}>
+                  <p className="text-xs sm:text-sm mb-1.5 flex items-start gap-2" style={{color: 'var(--text-muted)'}}>
+                    <span>⚠️</span>
+                    <span>This action is irreversible. Your data will be permanently deleted within 30 days as per our Privacy Policy.</span>
+                  </p>
+                  <p className="text-xs sm:text-sm flex items-start gap-2" style={{color: 'var(--text-muted)'}}>
+                    <span>💡</span>
+                    <span>Need help instead? Contact <a href="mailto:support@youbnail.com" style={{color: 'var(--accent-primary)'}} className="underline">support@youbnail.com</a></span>
+                  </p>
+                </div>
               </div>
             </div>
           </div>

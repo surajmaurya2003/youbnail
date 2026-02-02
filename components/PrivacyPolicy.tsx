@@ -43,7 +43,14 @@ export const PrivacyPolicy: React.FC = () => {
 
           <section>
             <h2 className="text-2xl font-bold mb-4" style={{color: 'var(--text-primary)'}}>4. Data Retention</h2>
-            <p>We retain your information for as long as your account is active or as needed to provide you services. You may delete your account at any time, and we will delete your personal information within 30 days.</p>
+            <p>We retain your information for as long as your account is active or as needed to provide you services. You may delete your account at any time through your account settings under the "Billing" section, and we will delete your personal information within 30 days.</p>
+            <p className="mt-2">When you delete your account:</p>
+            <ul className="list-disc pl-6 mt-2 space-y-2">
+              <li>Your account is immediately deactivated</li>
+              <li>All generated thumbnails and uploaded files are permanently deleted</li>
+              <li>Any active subscriptions are cancelled immediately</li>
+              <li>Your profile data, usage records, and personal information are permanently removed within 30 days</li>
+            </ul>
           </section>
 
           <section>
