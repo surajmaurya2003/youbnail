@@ -11,13 +11,13 @@
   Cache-Control: public, max-age=31536000, immutable
 
 # CSS files
-*.css
+/assets/*.css
   Cache-Control: public, max-age=31536000, immutable
 
 # JavaScript files  
-*.js
+/assets/*.js
   Cache-Control: public, max-age=31536000, immutable
 
 # HTML files - always revalidate
-*.html
+/*.html
   Cache-Control: public, max-age=0, must-revalidate

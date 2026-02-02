@@ -9,5 +9,11 @@
 /terms    /index.html   200
 /refund   /index.html   200
 
-# SPA fallback - must be last rule
-/*    /index.html   200
+# SPA fallback - must be last rule  
+/app/*   /index.html   200
+/create   /index.html   200
+/gallery  /index.html   200
+/profile  /index.html   200
+/usage    /index.html   200
+/billing  /index.html   200
+/support  /index.html   200
