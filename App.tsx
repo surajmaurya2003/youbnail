@@ -132,9 +132,6 @@ const AppWithToast: React.FC = () => {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annually'>('annually');
   const [isUpdatingPlan, setIsUpdatingPlan] = useState<string | null>(null); // Track which plan is being updated
   const [isGoogleLinked, setIsGoogleLinked] = useState(false);
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
-  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [lastGenerateTime, setLastGenerateTime] = useState<number>(0);
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [shareModalUrl, setShareModalUrl] = useState<string>('');
@@ -925,93 +922,6 @@ const AppWithToast: React.FC = () => {
       console.error('Profile update failed');
       alert('Failed to update profile. Please try again.');
     }
-  };
-
-  const handleDeleteAccount = async () => {
-    if (!user || isDeletingAccount) return;
-    
-    // Show the custom confirmation modal
-    setShowDeleteAccountModal(true);
-  };
-
-  const confirmDeleteAccount = async () => {
-    if (!user || isDeletingAccount) return;
-    
-    // Validate confirmation text
-    if (deleteConfirmText !== 'DELETE') {
-      alert('Account deletion cancelled. You must type "DELETE" exactly to confirm.');
-      return;
-    }
-    
-    try {
-      setIsDeletingAccount(true);
-      setShowDeleteAccountModal(false);
-      
-      console.log('Starting account deletion process...');
-      
-      // Verify user session before making the call
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session || !session.access_token) {
-        console.error('Session verification failed:', sessionError);
-        throw new Error('Authentication session expired. Please sign in again.');
-      }
-      
-      console.log('Session verified, calling delete-account function...');
-      console.log('User ID:', user.id);
-      console.log('Confirmation text:', deleteConfirmText);
-      
-      // Use Supabase functions.invoke which properly handles authentication
-      const { data, error } = await supabase.functions.invoke('delete-account', {
-        body: { 
-          userId: user.id,
-          confirmationText: deleteConfirmText
-        }
-      });
-      
-      console.log('Function response:', { data, error });
-      console.log('Data type:', typeof data, 'Error type:', typeof error);
-      
-      if (error) {
-        console.error('Delete account error details:', {
-          message: error.message,
-          name: error.name,
-          context: error.context,
-          full: error
-        });
-        throw new Error(error.message || 'Failed to delete account');
-      }
-      
-      if (data?.error) {
-        console.error('Account deletion error:', data.error);
-        throw new Error(data.error || 'Failed to delete account');
-      }
-      
-      console.log('Account deletion successful');
-      
-      // Sign out and clear state
-      await authService.signOut();
-      setIsAuthenticated(false);
-      setUser(null);
-      setHistory([]);
-      setUsageHistory([]);
-      
-      alert('Your account has been permanently deleted. Thank you for using ThumbPro AI.');
-      
-      // Redirect to landing page
-      window.location.href = '/';
-      
-    } catch (error: any) {
-      console.error('Account deletion failed:', error);
-      alert(`Failed to delete account: ${error.message || 'Unknown error'}. Please contact support if this issue persists.`);
-    } finally {
-      setIsDeletingAccount(false);
-      setDeleteConfirmText('');
-    }
-  };
-
-  const cancelDeleteAccount = () => {
-    setShowDeleteAccountModal(false);
-    setDeleteConfirmText('');
   };
 
   const handleReferenceFile = (file?: File | null) => {
@@ -2782,67 +2692,6 @@ const AppWithToast: React.FC = () => {
                 </button>
               </div>
             </div>
-
-            {/* Delete Account Card */}
-            <div className="card p-4 sm:p-6">
-              <div className="border rounded-lg p-6" style={{borderColor: 'var(--border-primary)'}}>
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-sm font-semibold mb-2" style={{color: 'var(--text-primary)'}}>
-                      Delete Account
-                    </h3>
-                    <p className="text-xs sm:text-sm leading-relaxed mb-4" style={{color: 'var(--text-secondary)'}}>
-                      Permanently delete your account and all associated data. This action cannot be undone and will:
-                    </p>
-                    <ul className="text-xs sm:text-sm space-y-1 mb-4" style={{color: 'var(--text-secondary)'}}>
-                      {user?.subscription_id && user?.plan !== 'free' && (
-                        <li className="flex items-center gap-2">
-                          <span style={{color: 'var(--text-muted)'}}>•</span>
-                          Cancel your active subscription immediately
-                        </li>
-                      )}
-                      <li className="flex items-center gap-2">
-                        <span style={{color: 'var(--text-muted)'}}>•</span>
-                        Delete all your generated thumbnails
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <span style={{color: 'var(--text-muted)'}}>•</span>
-                        Remove your profile and usage history
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <span style={{color: 'var(--text-muted)'}}>•</span>
-                        Revoke access to your account permanently
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-                
-                <button
-                  onClick={handleDeleteAccount}
-                  disabled={isDeletingAccount}
-                  className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center gap-2"
-                >
-                  {isDeletingAccount && (
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                  )}
-                  {isDeletingAccount ? 'Deleting Account...' : 'Delete Account'}
-                </button>
-                
-                <div className="mt-4 p-3 rounded-lg" style={{background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)'}}>
-                  <p className="text-xs sm:text-sm mb-1.5 flex items-start gap-2" style={{color: 'var(--text-muted)'}}>
-                    <span>⚠️</span>
-                    <span>This action is irreversible. Your data will be permanently deleted within 30 days as per our Privacy Policy.</span>
-                  </p>
-                  <p className="text-xs sm:text-sm flex items-start gap-2" style={{color: 'var(--text-muted)'}}>
-                    <span>💡</span>
-                    <span>Need help instead? Contact <a href="mailto:support@youbnail.com" style={{color: 'var(--accent-primary)'}} className="underline">support@youbnail.com</a></span>
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
@@ -3042,95 +2891,6 @@ const AppWithToast: React.FC = () => {
               >
                 Cancel
               </button>
-            </div>
-          </div>
-        </div>
-        
-        {/* Delete Account Confirmation Modal */}
-        <div className={`fixed inset-0 z-50 flex items-center justify-center ${showDeleteAccountModal ? '' : 'hidden'}`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}>
-          <div 
-            className="w-full mx-4 max-w-md rounded-lg shadow-lg p-6"
-            style={{backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-primary)'}}
-          >
-            <div className="space-y-6">
-              <div className="text-center">
-                <div className="mx-auto flex items-center justify-center w-12 h-12 rounded-full mb-4" style={{backgroundColor: 'rgba(239, 68, 68, 0.1)'}}>
-                  <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-semibold mb-2" style={{color: 'var(--text-primary)'}}>Delete Account</h3>
-                <p className="text-sm mb-4" style={{color: 'var(--text-secondary)'}}>
-                  Are you absolutely sure you want to delete your account?
-                </p>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="p-4 rounded-lg" style={{backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-primary)'}}>
-                  <h4 className="text-sm font-medium mb-3 flex items-center gap-2" style={{color: 'var(--text-primary)'}}>
-                    ⚠️ This action CANNOT be undone and will:
-                  </h4>
-                  <ul className="space-y-2 text-sm" style={{color: 'var(--text-secondary)'}}>
-                    {user?.subscription_id && user?.plan !== 'free' && (
-                      <li className="flex items-center gap-2">
-                        <span style={{color: 'var(--text-muted)'}}>•</span>
-                        Cancel your active subscription immediately
-                      </li>
-                    )}
-                    <li className="flex items-center gap-2">
-                      <span style={{color: 'var(--text-muted)'}}>•</span>
-                      Delete ALL your generated thumbnails
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span style={{color: 'var(--text-muted)'}}>•</span>
-                      Remove your profile and usage history
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span style={{color: 'var(--text-muted)'}}>•</span>
-                      Revoke access to your account permanently
-                    </li>
-                  </ul>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{color: 'var(--text-primary)'}}>
-                    Type "DELETE" to confirm account deletion:
-                  </label>
-                  <input
-                    type="text"
-                    value={deleteConfirmText}
-                    onChange={(e) => setDeleteConfirmText(e.target.value)}
-                    placeholder="Type DELETE here"
-                    className="w-full p-3 rounded-lg border text-sm"
-                    style={{
-                      backgroundColor: 'var(--bg-secondary)',
-                      borderColor: 'var(--border-primary)',
-                      color: 'var(--text-primary)'
-                    }}
-                  />
-                </div>
-              </div>
-              
-              <div className="flex gap-3">
-                <button
-                  onClick={cancelDeleteAccount}
-                  className="flex-1 p-3 rounded-lg transition-colors border text-sm font-medium"
-                  style={{
-                    backgroundColor: 'var(--bg-tertiary)',
-                    color: 'var(--text-secondary)',
-                    borderColor: 'var(--border-primary)'
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDeleteAccount}
-                  disabled={isDeletingAccount || deleteConfirmText !== 'DELETE'}
-                  className="flex-1 p-3 rounded-lg transition-colors text-sm font-medium bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white"
-                >
-                  {isDeletingAccount ? 'Deleting...' : 'Delete Account'}
-                </button>
-              </div>
             </div>
           </div>
         </div>
