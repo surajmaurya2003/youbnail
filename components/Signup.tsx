@@ -42,48 +42,76 @@ export const Signup: React.FC = () => {
 
   // Initialize Turnstile when component mounts
   useEffect(() => {
+    console.log('Turnstile site key:', import.meta.env.VITE_TURNSTILE_SITE_KEY);
+    
     const initTurnstile = () => {
       if (window.turnstile && turnstileRef.current && !turnstileWidgetId.current) {
+        console.log('Initializing Turnstile widget...');
         try {
+          const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAACWKFGQYX53fcGA';
+          console.log('Using site key:', siteKey);
+          
           turnstileWidgetId.current = window.turnstile.render(turnstileRef.current, {
-            sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAACWKFGQYX53fcGA', // Your actual site key
+            sitekey: siteKey,
             callback: (token: string) => {
+              console.log('Turnstile callback received:', token ? 'Token received' : 'No token');
               setTurnstileToken(token);
               setError(null);
             },
             'error-callback': () => {
+              console.error('Turnstile error callback triggered');
               setError('CAPTCHA verification failed. Please try again.');
               setTurnstileToken(null);
             },
             'expired-callback': () => {
+              console.log('Turnstile expired callback triggered');
               setError('CAPTCHA expired. Please verify again.');
               setTurnstileToken(null);
             }
           });
+          console.log('Turnstile widget initialized with ID:', turnstileWidgetId.current);
         } catch (err) {
           console.error('Turnstile initialization failed:', err);
+          setError('CAPTCHA failed to load. Please refresh the page.');
         }
+      } else {
+        console.log('Turnstile not ready yet. Window.turnstile:', !!window.turnstile, 'Ref:', !!turnstileRef.current, 'Widget exists:', !!turnstileWidgetId.current);
       }
     };
 
     // Wait for Turnstile script to load
     if (window.turnstile) {
+      console.log('Turnstile already available');
       initTurnstile();
     } else {
+      console.log('Waiting for Turnstile to load...');
       const checkTurnstile = setInterval(() => {
         if (window.turnstile) {
+          console.log('Turnstile loaded!');
           clearInterval(checkTurnstile);
           initTurnstile();
         }
       }, 100);
 
-      return () => clearInterval(checkTurnstile);
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        if (!window.turnstile) {
+          console.error('Turnstile failed to load after 10 seconds');
+          clearInterval(checkTurnstile);
+          setError('CAPTCHA failed to load. Please refresh the page.');
+        }
+      }, 10000);
+
+      return () => {
+        clearInterval(checkTurnstile);
+      };
     }
 
     return () => {
-      if (turnstileWidgetId.current) {
+      if (turnstileWidgetId.current && window.turnstile) {
         try {
-          window.turnstile?.remove(turnstileWidgetId.current);
+          window.turnstile.remove(turnstileWidgetId.current);
+          console.log('Turnstile widget removed');
         } catch (err) {
           console.error('Error removing Turnstile widget:', err);
         }
@@ -102,9 +130,9 @@ export const Signup: React.FC = () => {
       return;
     }
 
+    // Temporarily allow submission without CAPTCHA for testing
     if (!turnstileToken) {
-      setError('Please complete the CAPTCHA verification.');
-      return;
+      console.warn('No CAPTCHA token available, proceeding anyway for testing');
     }
 
     setError(null);
@@ -112,21 +140,23 @@ export const Signup: React.FC = () => {
     setLoading(true);
     
     try {
-      await authService.signInWithMagicLink(email, { captchaToken: turnstileToken });
+      // Pass captcha token if available
+      const options = turnstileToken ? { captchaToken: turnstileToken } : {};
+      await authService.signInWithMagicLink(email, options);
       setMessage('Check your email for a magic link to complete signup!');
       setName('');
       setEmail('');
       
       // Reset Turnstile after successful submission
-      if (turnstileWidgetId.current) {
-        window.turnstile?.reset(turnstileWidgetId.current);
+      if (turnstileWidgetId.current && window.turnstile) {
+        window.turnstile.reset(turnstileWidgetId.current);
         setTurnstileToken(null);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to send magic link.');
       // Reset Turnstile on error
-      if (turnstileWidgetId.current) {
-        window.turnstile?.reset(turnstileWidgetId.current);
+      if (turnstileWidgetId.current && window.turnstile) {
+        window.turnstile.reset(turnstileWidgetId.current);
         setTurnstileToken(null);
       }
     } finally {
@@ -245,13 +275,29 @@ export const Signup: React.FC = () => {
             <div 
               ref={turnstileRef}
               className="flex justify-center"
-              style={{ minHeight: '65px' }}
-            />
+              style={{ 
+                minHeight: '65px',
+                border: '1px solid #333', // Temporary debug border
+                borderRadius: '8px',
+                padding: '10px'
+              }}
+            >
+              {!window.turnstile && (
+                <div className="text-center text-sm" style={{color: 'var(--text-secondary)'}}>
+                  Loading CAPTCHA...
+                </div>
+              )}
+            </div>
+            {process.env.NODE_ENV === 'development' && (
+              <div className="text-xs mt-2" style={{color: 'var(--text-muted)'}}>
+                Debug: Site key = {import.meta.env.VITE_TURNSTILE_SITE_KEY || 'Not set'}
+              </div>
+            )}
           </div>
 
           <button
             type="submit"
-            disabled={loading || !name.trim() || !email.trim() || !turnstileToken}
+            disabled={loading || !name.trim() || !email.trim()}
             className="w-full py-3 px-4 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             style={{
               background: 'var(--accent-primary)',

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Turnstile Debug Test</title>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+</head>
+<body>
+    <h1>Turnstile Debug Test</h1>
+    <div id="turnstile-widget"></div>
+    
+    <script>
+        console.log('Debug page loaded');
+        
+        function initTurnstile() {
+            console.log('Initializing Turnstile...');
+            console.log('window.turnstile available:', !!window.turnstile);
+            
+            if (window.turnstile) {
+                const widget = document.getElementById('turnstile-widget');
+                try {
+                    const widgetId = window.turnstile.render(widget, {
+                        sitekey: '0x4AAAAAACWKFGQYX53fcGA',
+                        callback: function(token) {
+                            console.log('CAPTCHA solved, token:', token ? 'received' : 'empty');
+                        },
+                        'error-callback': function() {
+                            console.error('CAPTCHA error callback');
+                        }
+                    });
+                    console.log('Widget rendered with ID:', widgetId);
+                } catch (error) {
+                    console.error('Error rendering widget:', error);
+                }
+            } else {
+                console.error('Turnstile not available');
+                setTimeout(initTurnstile, 100);
+            }
+        }
+        
+        // Try to init when page loads
+        window.addEventListener('load', function() {
+            console.log('Page loaded, attempting to init Turnstile...');
+            initTurnstile();
+        });
+        
+        // Also try after a delay
+        setTimeout(initTurnstile, 1000);
+    </script>
+</body>
+</html>
