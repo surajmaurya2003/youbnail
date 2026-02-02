@@ -949,8 +949,20 @@ const AppWithToast: React.FC = () => {
       
       console.log('Starting account deletion process...');
       
-      // Call delete-account edge function
+      // Verify user session before making the call
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session || !session.access_token) {
+        console.error('Session verification failed:', sessionError);
+        throw new Error('Authentication session expired. Please sign in again.');
+      }
+      
+      console.log('Session verified, calling delete-account function...');
+      
+      // Call delete-account edge function with explicit headers
       const { data, error } = await supabase.functions.invoke('delete-account', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: { 
           userId: user.id,
           confirmationText: deleteConfirmText
