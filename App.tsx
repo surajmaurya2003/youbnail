@@ -2795,10 +2795,12 @@ const AppWithToast: React.FC = () => {
                       Permanently delete your account and all associated data. This action cannot be undone and will:
                     </p>
                     <ul className="text-xs sm:text-sm space-y-1 mb-4" style={{color: 'var(--text-secondary)'}}>
-                      <li className="flex items-center gap-2">
-                        <span style={{color: 'var(--text-muted)'}}>•</span>
-                        Cancel any active subscriptions immediately
-                      </li>
+                      {user?.subscription_id && user?.plan !== 'free' && (
+                        <li className="flex items-center gap-2">
+                          <span style={{color: 'var(--text-muted)'}}>•</span>
+                          Cancel your active subscription immediately
+                        </li>
+                      )}
                       <li className="flex items-center gap-2">
                         <span style={{color: 'var(--text-muted)'}}>•</span>
                         Delete all your generated thumbnails
@@ -3069,10 +3071,12 @@ const AppWithToast: React.FC = () => {
                     ⚠️ This action CANNOT be undone and will:
                   </h4>
                   <ul className="space-y-2 text-sm" style={{color: 'var(--text-secondary)'}}>
-                    <li className="flex items-center gap-2">
-                      <span style={{color: 'var(--text-muted)'}}>•</span>
-                      Cancel any active subscriptions immediately
-                    </li>
+                    {user?.subscription_id && user?.plan !== 'free' && (
+                      <li className="flex items-center gap-2">
+                        <span style={{color: 'var(--text-muted)'}}>•</span>
+                        Cancel your active subscription immediately
+                      </li>
+                    )}
                     <li className="flex items-center gap-2">
                       <span style={{color: 'var(--text-muted)'}}>•</span>
                       Delete ALL your generated thumbnails
