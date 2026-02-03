@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
       // Options: cancel_at_next_billing_date (true = cancel at period end, false/omit = immediate)
       try {
         console.log("Step 2: Calling DodoPayments API to cancel subscription...");
-        console.log("Using immediate cancellation (cancel_at_next_billing_date: false)");
+        console.log("Using scheduled cancellation (cancel_at_next_billing_date: true)");
         
         cancelResponse = await fetch(`${dodoBaseUrl}/subscriptions/${user.subscription_id}`, {
           method: "PATCH",
@@ -197,7 +197,7 @@ Deno.serve(async (req) => {
             "Authorization": `Bearer ${dodoApiKey}`,
           },
           body: JSON.stringify({
-            cancel_at_next_billing_date: false, // Immediate cancellation
+            cancel_at_next_billing_date: true, // Cancel at end of billing period
           }),
         });
       
