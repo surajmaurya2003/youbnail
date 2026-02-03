@@ -128,28 +128,84 @@ Deno.serve(async (req) => {
       ? "https://live.dodopayments.com"
       : "https://test.dodopayments.com";
 
+    console.log("=== DODO PAYMENTS CANCELLATION ATTEMPT ===");
     console.log("Attempting to cancel subscription:", {
       subscriptionId: user.subscription_id,
       customerId: user.payment_customer_id,
-      dodoApiMode,
-      dodoBaseUrl,
-      fullUrl: `${dodoBaseUrl}/v1/subscriptions/${user.subscription_id}/cancel`
+      dodoApiMode: dodoApiMode,
+      dodoApiModeEnvSet: !!Deno.env.get("DODO_API_MODE"),
+      dodoBaseUrl: dodoBaseUrl,
+      fullUrl: `${dodoBaseUrl}/v1/subscriptions/${user.subscription_id}/cancel`,
+      apiKeyPresent: !!dodoApiKey,
+      apiKeyLength: dodoApiKey?.length || 0
     });
-
-    // Attempt to cancel via DodoPayments API
-    let cancelResponse;
-    let cancelError = null;
     
-    // Try the correct DodoPayments v1 API endpoint
+    // CRITICAL: Check if subscription ID format matches the API mode
+    const looksLikeTestId = user.subscription_id.includes('test_') || user.subscription_id.startsWith('sub_test');
+    const looksLikeLiveId = !looksLikeTestId && (user.subscription_id.startsWith('sub_') || user.subscription_id.includes('live_'));
+    
+    if (dodoApiMode === "live" && looksLikeTestId) {
+      console.warn("⚠️ WARNING: Subscription ID looks like a TEST subscription but DODO_API_MODE is set to LIVE");
+      console.warn("This will likely fail with 404. The subscription was probably created in test mode.");
+    } else if (dodoApiMode === "test" && looksLikeLiveId) {
+      console.warn("⚠️ WARNING: Subscription ID looks like a LIVE subscription but DODO_API_MODE is set to TEST");
+      console.warn("This will likely fail with 404. Please set DODO_API_MODE=live in Supabase edge function secrets.");
+    }
+    console.log("==========================================");
+
+    // First, verify the subscription exists in DodoPayments
+    console.log("Step 1: Verifying subscription exists in DodoPayments...");
+    let subscriptionExistsInDodo = false;
+    
     try {
-      console.log("Calling DodoPayments API to cancel subscription...");
-      cancelResponse = await fetch(`${dodoBaseUrl}/v1/subscriptions/${user.subscription_id}/cancel`, {
-        method: "POST",
+      const verifyResponse = await fetch(`${dodoBaseUrl}/v1/subscriptions/${user.subscription_id}`, {
+        method: "GET",
         headers: {
-          "Content-Type": "application/json",
           "Authorization": `Bearer ${dodoApiKey}`,
         },
       });
+      
+      const verifyText = await verifyResponse.text();
+      console.log("Subscription verification response:", {
+        status: verifyResponse.status,
+        statusText: verifyResponse.statusText,
+        body: verifyText.substring(0, 200)
+      });
+      
+      if (!verifyResponse.ok) {
+        console.warn("⚠️ Subscription does NOT exist in DodoPayments");
+        console.warn("This subscription exists in your database but not in DodoPayments.");
+        console.warn("Possible reasons:");
+        console.warn("1. Webhook didn't fire after checkout");
+        console.warn("2. Different DodoPayments account");
+        console.warn("3. Subscription was deleted from DodoPayments");
+        console.warn("Will skip DodoPayments cancellation and mark as cancelled in database only...");
+        subscriptionExistsInDodo = false;
+      } else {
+        console.log("✓ Subscription verified in DodoPayments");
+        subscriptionExistsInDodo = true;
+      }
+    } catch (verifyError: any) {
+      console.error("Verification request failed:", verifyError.message);
+      console.warn("Assuming subscription doesn't exist in DodoPayments, will proceed with database-only cancellation");
+      subscriptionExistsInDodo = false;
+    }
+
+    // Attempt to cancel via DodoPayments API (only if subscription exists)
+    let cancelResponse;
+    let cancelError = null;
+    
+    if (subscriptionExistsInDodo) {
+      // Try the correct DodoPayments v1 API endpoint
+      try {
+        console.log("Step 2: Calling DodoPayments API to cancel subscription...");
+        cancelResponse = await fetch(`${dodoBaseUrl}/v1/subscriptions/${user.subscription_id}/cancel`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${dodoApiKey}`,
+          },
+        });
       
       const responseText = await cancelResponse.text();
       console.log("DodoPayments response:", {
@@ -207,11 +263,20 @@ Deno.serve(async (req) => {
       console.error("DodoPayments API request failed:", err);
       cancelError = err.message || String(err);
     }
+    } else {
+      // Subscription doesn't exist in DodoPayments, skip API call
+      console.log("Skipping DodoPayments API call - subscription not found in their system");
+      cancelError = "Subscription not found in DodoPayments (likely webhook failure during checkout)";
+    }
 
-    // If DodoPayments API call fails, mark as cancelled in our DB anyway
+    // If DodoPayments API call fails OR was skipped, mark as cancelled in our DB anyway
     // The user expects the subscription to be cancelled
     // Note: 404 errors are common for test subscriptions or already-cancelled subscriptions
-    console.warn("⚠️ DodoPayments cancellation failed (this is often expected for test subscriptions):", cancelError);
+    if (cancelError) {
+      console.warn("⚠️ DodoPayments cancellation failed or skipped:", cancelError);
+    } else {
+      console.warn("⚠️ DodoPayments cancellation failed (this is often expected for test subscriptions):", cancelError);
+    }
     console.log("✓ Marking subscription as cancelled in database (user-initiated cancellation)");
     
     const cancelledAt = new Date().toISOString();
