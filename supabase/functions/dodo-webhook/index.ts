@@ -285,27 +285,47 @@ Deno.serve(async (req) => {
         // Record in subscription history if subscription_id exists
         if (subscriptionId) {
           console.log('Recording subscription history...');
-          const historyInsert = {
-            user_id: userId,
-            subscription_id: subscriptionId,
-            product_id: productId,
-            billing_period: normalizedBillingPeriod,
-            status: 'active',
-            amount_paid: eventData.amount || eventData.amount_paid || 0,
-            currency: eventData.currency || 'USD',
-            started_at: now.toISOString(),
-            ends_at: endsAt.toISOString(),
-          };
           
-          console.log('History insert data:', historyInsert);
-          
-          const { error: historyError } = await supabaseClient
+          // Check if this subscription already has a history record to prevent duplicates
+          const { data: existingHistory, error: checkError } = await supabaseClient
             .from('subscription_history')
-            .insert(historyInsert);
+            .select('id')
+            .eq('user_id', userId)
+            .eq('subscription_id', subscriptionId)
+            .eq('status', 'active')
+            .maybeSingle();
+          
+          if (checkError) {
+            console.error('Error checking existing subscription history:', checkError);
+          }
+          
+          if (existingHistory) {
+            console.log('Subscription history already exists, skipping duplicate insert');
+          } else {
+            const historyInsert = {
+              user_id: userId,
+              subscription_id: subscriptionId,
+              product_id: productId,
+              billing_period: normalizedBillingPeriod,
+              status: 'active',
+              amount_paid: eventData.amount || eventData.amount_paid || 0,
+              currency: eventData.currency || 'USD',
+              started_at: now.toISOString(),
+              ends_at: endsAt.toISOString(),
+            };
             
-          if (historyError) {
-            console.error('Error inserting subscription history:', historyError);
-            // Don't fail the webhook for history insert errors
+            console.log('History insert data:', historyInsert);
+            
+            const { error: historyError } = await supabaseClient
+              .from('subscription_history')
+              .insert(historyInsert);
+              
+            if (historyError) {
+              console.error('Error inserting subscription history:', historyError);
+              // Don't fail the webhook for history insert errors
+            } else {
+              console.log('✅ Subscription history recorded successfully');
+            }
           }
         }
 
@@ -402,18 +422,50 @@ Deno.serve(async (req) => {
         
         console.log('✓ User updated successfully:', updateResult);
 
-        // Record in subscription history
-        await supabaseClient.from('subscription_history').insert({
-          user_id: userId,
-          subscription_id: subscriptionId,
-          product_id: productId,
-          billing_period: billingPeriod,
-          status: 'active',
-          amount_paid: eventData.amount || eventData.amount_paid || 0,
-          currency: eventData.currency || 'USD',
-          started_at: now.toISOString(),
-          ends_at: endsAt.toISOString(),
-        });
+        // Record in subscription history - check for duplicates first
+        console.log('Recording subscription history...');
+        
+        // Check if this subscription already has a history record to prevent duplicates
+        const { data: existingHistory, error: checkError } = await supabaseClient
+          .from('subscription_history')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('subscription_id', subscriptionId)
+          .eq('status', 'active')
+          .maybeSingle();
+        
+        if (checkError) {
+          console.error('Error checking existing subscription history:', checkError);
+        }
+        
+        if (existingHistory) {
+          console.log('Subscription history already exists (likely from payment.succeeded), skipping duplicate insert');
+        } else {
+          const historyInsert = {
+            user_id: userId,
+            subscription_id: subscriptionId,
+            product_id: productId,
+            billing_period: billingPeriod,
+            status: 'active',
+            amount_paid: eventData.amount || eventData.amount_paid || 0,
+            currency: eventData.currency || 'USD',
+            started_at: now.toISOString(),
+            ends_at: endsAt.toISOString(),
+          };
+          
+          console.log('History insert data:', historyInsert);
+          
+          const { error: historyError } = await supabaseClient
+            .from('subscription_history')
+            .insert(historyInsert);
+          
+          if (historyError) {
+            console.error('Error inserting subscription history:', historyError);
+            // Don't fail the webhook for history insert errors
+          } else {
+            console.log('✅ Subscription history recorded successfully');
+          }
+        }
 
         return new Response(JSON.stringify({ received: true }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
