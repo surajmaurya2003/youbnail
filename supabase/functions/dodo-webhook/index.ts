@@ -326,7 +326,12 @@ Deno.serve(async (req) => {
               .insert(historyInsert);
               
             if (historyError) {
-              console.error('Error inserting subscription history:', historyError);
+              // Check if it's a unique constraint violation (duplicate)
+              if (historyError.code === '23505') {
+                console.log('⚠️ Duplicate subscription detected (unique constraint), skipping insert');
+              } else {
+                console.error('Error inserting subscription history:', historyError);
+              }
               // Don't fail the webhook for history insert errors
             } else {
               console.log('✅ Subscription history recorded successfully');
