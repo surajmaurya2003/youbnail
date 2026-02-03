@@ -183,15 +183,19 @@ Deno.serve(async (req) => {
     let cancelError = null;
     
     if (subscriptionExistsInDodo) {
-      // Try the correct DodoPayments v1 API endpoint
+      // Try the correct DodoPayments API endpoint (PATCH, not POST to /cancel)
       try {
         console.log("Step 2: Calling DodoPayments API to cancel subscription...");
-        cancelResponse = await fetch(`${dodoBaseUrl}/v1/subscriptions/${user.subscription_id}/cancel`, {
-          method: "POST",
+        cancelResponse = await fetch(`${dodoBaseUrl}/v1/subscriptions/${user.subscription_id}`, {
+          method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${dodoApiKey}`,
           },
+          body: JSON.stringify({
+            cancel_at_next_billing_date: true,
+            status: "cancelled"
+          }),
         });
       
       const responseText = await cancelResponse.text();
