@@ -324,7 +324,7 @@ Deno.serve(async (req) => {
       metadata: {
         user_id: userId,
         plan_id: planId,
-        billing_period: billingPeriod,
+        billing_period: normalizedBillingPeriod, // Use normalized value for consistency
         current_plan: actualCurrentPlan,
         current_billing_period: normalizedCurrentBillingPeriod,
         is_plan_change: isPlanChange.toString(),
@@ -333,6 +333,8 @@ Deno.serve(async (req) => {
         is_downgrade: isDowngrade.toString(),
       },
     };
+    
+    console.log('Checkout metadata:', checkoutPayload.metadata);
     
     // If user has active subscription, include subscription update info
     if (actualHasActiveSubscription && userData.subscription_id) {

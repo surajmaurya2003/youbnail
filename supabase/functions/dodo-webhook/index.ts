@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
     // DodoPayments uses: payment.succeeded, payment.failed, subscription.active, subscription.renewed, etc.
     switch (eventType) {
       case 'payment.succeeded': {
-        // Payment succeeded - this usually triggers subscription creation
+        // Payment succeeded - Record the payment but let subscription.active handle subscription setup
         console.log('=== PAYMENT SUCCEEDED EVENT ===');
         console.log('Full event data:', JSON.stringify(eventData, null, 2));
         console.log('Payment amount details:', {
@@ -210,156 +210,46 @@ Deno.serve(async (req) => {
           subtotal: eventData.subtotal
         });
         
-        // Handle it similar to subscription.active
         const userId = eventData.metadata?.user_id || eventData.customer?.metadata?.user_id;
-        const planId = eventData.metadata?.plan_id || 'starter';
-        const billingPeriod = eventData.metadata?.billing_period || 'monthly';
-        // Normalize billing period just in case
-        const normalizedBillingPeriod = billingPeriod === 'annually' ? 'annual' : billingPeriod;
-        const subscriptionId = eventData.subscription_id || eventData.subscription?.id || eventData.id;
-        const productId = eventData.product_id || eventData.subscription?.product_id || event.data?.product_id;
-
+        const subscriptionId = eventData.subscription_id || eventData.subscription?.id;
+        
         if (!userId) {
           console.error('No user_id in payment.succeeded event');
-          // Still return success to prevent retries
           return new Response(JSON.stringify({ received: true, message: 'No user_id found' }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
 
-        console.log('Processing payment.succeeded for user:', userId);
-        console.log('Plan:', planId, 'Billing:', billingPeriod, '→ normalized:', normalizedBillingPeriod);
+        console.log('Payment succeeded for user:', userId);
         console.log('Currency:', eventData.currency || 'Unknown');
         console.log('Amount paid:', eventData.amount || eventData.amount_paid || 0);
-        console.log('Customer info:', eventData.customer || 'No customer data');
-
-        // Validate required data
-        if (!planId || !normalizedBillingPeriod) {
-          console.error('Missing plan or billing period data');
-          return new Response(JSON.stringify({ received: true, error: 'Missing plan data' }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-
-        // Calculate credits based on plan (regardless of currency or amount)
-        const creditsMap: Record<string, number> = {
-          'starter-monthly': 30,
-          'starter-annual': 360,
-          'pro-monthly': 100,
-          'pro-annual': 1200,
-        };
-        const planKey = `${planId}-${normalizedBillingPeriod}`;
-        const credits = creditsMap[planKey] || 30;
         
-        console.log('Plan key:', planKey, '→ Credits:', credits);
-
-        // Calculate subscription end date
-        const now = new Date();
-        const endsAt = new Date(now);
-        if (billingPeriod === 'monthly') {
-          endsAt.setMonth(endsAt.getMonth() + 1);
-        } else {
-          endsAt.setFullYear(endsAt.getFullYear() + 1);
-        }
-
-        // Update user subscription
-        console.log('Updating user subscription in database...');
-        const updateData = {
-          plan: planId,
-          credits: credits,
-          subscription_id: subscriptionId,
-          subscription_status: 'active',
-          subscription_product_id: productId,
-          subscription_billing_period: billingPeriod,
-          subscription_started_at: now.toISOString(),
-          subscription_ends_at: endsAt.toISOString(),
-          payment_customer_id: eventData.customer_id || eventData.customer?.id,
-          updated_at: now.toISOString(),
-        };
-        
-        console.log('Update data:', updateData);
-        
-        const { error: updateError } = await supabaseClient
-          .from('users')
-          .update(updateData)
-          .eq('id', userId);
-
-        if (updateError) {
-          console.error('❌ Error updating user from payment.succeeded:', updateError);
-          // Still return success to prevent infinite retries
-          return new Response(JSON.stringify({ received: true, error: 'Database update failed' }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-
-        console.log('✅ User subscription updated successfully');
-        console.log('Final user state: plan =', planId, ', credits =', credits, ', status = active');
-
-        // Record in subscription history if subscription_id exists
+        // Only update payment info if we have subscription_id
         if (subscriptionId) {
-          console.log('Recording subscription history...');
+          // Update payment_customer_id if available
+          const customerUpdateData: any = {
+            updated_at: new Date().toISOString(),
+          };
           
-          // Check if this subscription already has a recent history record to prevent duplicates
-          // Check for records created within the last 5 seconds with same subscription and product
-          const fiveSecondsAgo = new Date(Date.now() - 5000).toISOString();
-          const { data: existingHistory, error: checkError } = await supabaseClient
-            .from('subscription_history')
-            .select('id, created_at')
-            .eq('user_id', userId)
-            .eq('subscription_id', subscriptionId)
-            .eq('product_id', productId)
-            .eq('billing_period', normalizedBillingPeriod)
-            .eq('status', 'active')
-            .gte('created_at', fiveSecondsAgo)
-            .maybeSingle();
-          
-          if (checkError && checkError.code !== 'PGRST116') {
-            console.error('Error checking existing subscription history:', checkError);
+          if (eventData.customer_id || eventData.customer?.id) {
+            customerUpdateData.payment_customer_id = eventData.customer_id || eventData.customer?.id;
           }
           
-          if (existingHistory) {
-            console.log('Subscription history already exists (created', existingHistory.created_at, '), skipping duplicate insert');
-          } else {
-            const historyInsert = {
-              user_id: userId,
-              subscription_id: subscriptionId,
-              product_id: productId,
-              billing_period: normalizedBillingPeriod,
-              status: 'active',
-              amount_paid: eventData.amount || eventData.amount_paid || 0,
-              currency: eventData.currency || 'USD',
-              started_at: now.toISOString(),
-              ends_at: endsAt.toISOString(),
-            };
+          await supabaseClient
+            .from('users')
+            .update(customerUpdateData)
+            .eq('id', userId);
             
-            console.log('History insert data:', historyInsert);
-            
-            const { error: historyError } = await supabaseClient
-              .from('subscription_history')
-              .insert(historyInsert);
-              
-            if (historyError) {
-              // Check if it's a unique constraint violation (duplicate)
-              if (historyError.code === '23505') {
-                console.log('⚠️ Duplicate subscription detected (unique constraint), skipping insert');
-              } else {
-                console.error('Error inserting subscription history:', historyError);
-              }
-              // Don't fail the webhook for history insert errors
-            } else {
-              console.log('✅ Subscription history recorded successfully');
-            }
-          }
+          console.log('✅ Payment customer info updated');
         }
-
-        console.log('🎉 Payment processing completed successfully');
-        console.log('User', userId, 'now has', credits, 'credits on', planId, 'plan');
+        
+        // Note: Subscription activation is handled by subscription.active event
+        console.log('Payment recorded. Subscription will be activated by subscription.active event');
         
         return new Response(JSON.stringify({ 
           received: true, 
           processed: 'payment.succeeded',
-          currency: eventData.currency || 'USD',
-          credits_assigned: credits
+          note: 'Subscription activation handled by subscription.active event'
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -375,7 +265,10 @@ Deno.serve(async (req) => {
         // Get user ID from metadata
         const userId = eventData.metadata?.user_id || eventData.customer?.metadata?.user_id;
         const planId = eventData.metadata?.plan_id || 'starter';
-        const billingPeriod = eventData.metadata?.billing_period || 'monthly';
+        let billingPeriod = eventData.metadata?.billing_period || 'monthly';
+        // Normalize billing period (annually → annual)
+        billingPeriod = billingPeriod === 'annually' ? 'annual' : billingPeriod;
+        
         const subscriptionId = eventData.subscription_id || eventData.id;
         const productId = eventData.product_id || event.data?.product_id;
 
@@ -389,9 +282,17 @@ Deno.serve(async (req) => {
           });
         }
 
-        console.log('Processing subscription.active for user:', userId);
+        console.log('Processing subscription event for user:', userId);
         console.log('Plan:', planId, 'Billing:', billingPeriod);
         console.log('Subscription ID:', subscriptionId);
+
+        // Validate required data
+        if (!planId || !billingPeriod) {
+          console.error('Missing plan or billing period data');
+          return new Response(JSON.stringify({ received: true, error: 'Missing plan data' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
 
         // Calculate credits based on plan
         const creditsMap: Record<string, number> = {
@@ -400,7 +301,10 @@ Deno.serve(async (req) => {
           'pro-monthly': 100,
           'pro-annual': 1200,
         };
-        const credits = creditsMap[`${planId}-${billingPeriod}`] || 30;
+        const planKey = `${planId}-${billingPeriod}`;
+        const credits = creditsMap[planKey] || 30;
+
+        console.log('Plan key:', planKey, '→ Credits:', credits);
 
         // Calculate subscription end date
         const now = new Date();
@@ -434,7 +338,7 @@ Deno.serve(async (req) => {
           .eq('id', userId);
 
         if (updateError) {
-          console.error('Error updating user:', updateError);
+          console.error('❌ Error updating user:', updateError);
           console.error('User ID:', userId);
           console.error('Update data:', updateData);
           return new Response(JSON.stringify({ error: 'Database error', details: updateError }), { 
@@ -443,74 +347,94 @@ Deno.serve(async (req) => {
           });
         }
         
-        console.log('✓ User updated successfully:', updateResult);
+        console.log('✅ User updated successfully');
 
         // Record in subscription history - check for duplicates first
-        console.log('Recording subscription history...');
-        
-        // Check if this subscription already has a recent history record to prevent duplicates
-        // Check for records created within the last 5 seconds with same subscription and product
-        const fiveSecondsAgo = new Date(Date.now() - 5000).toISOString();
-        const { data: existingHistory, error: checkError } = await supabaseClient
-          .from('subscription_history')
-          .select('id, created_at')
-          .eq('user_id', userId)
-          .eq('subscription_id', subscriptionId)
-          .eq('product_id', productId)
-          .eq('billing_period', billingPeriod)
-          .eq('status', 'active')
-          .gte('created_at', fiveSecondsAgo)
-          .maybeSingle();
-        
-        if (checkError && checkError.code !== 'PGRST116') {
-          console.error('Error checking existing subscription history:', checkError);
-        }
-        
-        if (existingHistory) {
-          console.log('Subscription history already exists (created', existingHistory.created_at, ', likely from payment.succeeded), skipping duplicate insert');
-        } else {
-          const historyInsert = {
-            user_id: userId,
-            subscription_id: subscriptionId,
-            product_id: productId,
-            billing_period: billingPeriod,
-            status: 'active',
-            amount_paid: eventData.amount || eventData.amount_paid || 0,
-            currency: eventData.currency || 'USD',
-            started_at: now.toISOString(),
-            ends_at: endsAt.toISOString(),
-          };
+        if (subscriptionId && productId) {
+          console.log('Recording subscription history...');
           
-          console.log('History insert data:', historyInsert);
-          
-          const { error: historyError } = await supabaseClient
+          // Check if this subscription already has a recent history record to prevent duplicates
+          const fiveSecondsAgo = new Date(Date.now() - 5000).toISOString();
+          const { data: existingHistory, error: checkError } = await supabaseClient
             .from('subscription_history')
-            .insert(historyInsert);
+            .select('id, created_at')
+            .eq('user_id', userId)
+            .eq('subscription_id', subscriptionId)
+            .eq('product_id', productId)
+            .eq('billing_period', billingPeriod)
+            .eq('status', 'active')
+            .gte('created_at', fiveSecondsAgo)
+            .maybeSingle();
           
-          if (historyError) {
-            console.error('Error inserting subscription history:', historyError);
-            // Don't fail the webhook for history insert errors
-          } else {
-            console.log('✅ Subscription history recorded successfully');
+          if (checkError && checkError.code !== 'PGRST116') {
+            console.error('Error checking existing subscription history:', checkError);
           }
+          
+          if (existingHistory) {
+            console.log('⚠️ Subscription history already exists (created', existingHistory.created_at, '), skipping duplicate insert');
+          } else {
+            const historyInsert = {
+              user_id: userId,
+              subscription_id: subscriptionId,
+              product_id: productId,
+              billing_period: billingPeriod,
+              status: 'active',
+              amount_paid: eventData.amount || eventData.amount_paid || 0,
+              currency: eventData.currency || 'USD',
+              started_at: now.toISOString(),
+              ends_at: endsAt.toISOString(),
+            };
+            
+            console.log('History insert data:', historyInsert);
+            
+            const { error: historyError } = await supabaseClient
+              .from('subscription_history')
+              .insert(historyInsert);
+            
+            if (historyError) {
+              if (historyError.code === '23505') {
+                console.log('⚠️ Duplicate subscription detected (unique constraint), skipping insert');
+              } else {
+                console.error('❌ Error inserting subscription history:', historyError);
+              }
+              // Don't fail the webhook for history insert errors
+            } else {
+              console.log('✅ Subscription history recorded successfully');
+            }
+          }
+        } else {
+          console.warn('⚠️ Skipping subscription history: missing', !subscriptionId ? 'subscription_id' : 'product_id');
         }
 
-        return new Response(JSON.stringify({ received: true }), {
+        console.log('🎉 Subscription event processed successfully');
+        console.log('User', userId, 'now has', credits, 'credits on', planId, 'plan');
+
+        return new Response(JSON.stringify({ 
+          received: true,
+          processed: eventType,
+          user_id: userId,
+          plan: planId,
+          credits: credits
+        }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       case 'subscription.cancelled':
       case 'subscription.canceled': {
+        console.log('=== SUBSCRIPTION CANCELLED EVENT ===');
         const userId = eventData.metadata?.user_id || eventData.customer?.metadata?.user_id;
         const subscriptionId = eventData.subscription_id || eventData.id;
 
-        if (userId) {
+        if (userId && subscriptionId) {
+          console.log('Cancelling subscription for user:', userId);
+          
+          const now = new Date().toISOString();
           await supabaseClient
             .from('users')
             .update({
               subscription_status: 'cancelled',
-              updated_at: new Date().toISOString(),
+              updated_at: now,
             })
             .eq('subscription_id', subscriptionId);
 
@@ -519,22 +443,29 @@ Deno.serve(async (req) => {
             .from('subscription_history')
             .update({
               status: 'cancelled',
-              cancelled_at: new Date().toISOString(),
+              cancelled_at: now,
             })
-            .eq('subscription_id', subscriptionId);
+            .eq('subscription_id', subscriptionId)
+            .eq('status', 'active'); // Only update active records
+
+          console.log('✅ Subscription cancelled successfully');
+        } else {
+          console.warn('⚠️ Missing user_id or subscription_id in cancellation event');
         }
 
-        return new Response(JSON.stringify({ received: true }), {
+        return new Response(JSON.stringify({ received: true, processed: 'subscription.cancelled' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       case 'payment.failed': {
         // Payment failed - mark subscription as past_due
+        console.log('=== PAYMENT FAILED EVENT ===');
         const userId = eventData.metadata?.user_id || eventData.customer?.metadata?.user_id;
         const subscriptionId = eventData.subscription_id || eventData.subscription?.id || eventData.id;
 
         if (userId && subscriptionId) {
+          console.log('Marking subscription as past_due for user:', userId);
           await supabaseClient
             .from('users')
             .update({
@@ -542,19 +473,52 @@ Deno.serve(async (req) => {
               updated_at: new Date().toISOString(),
             })
             .eq('subscription_id', subscriptionId);
+          
+          console.log('✅ Payment failure processed');
+        } else {
+          console.warn('⚠️ Missing user_id or subscription_id in payment.failed event');
         }
 
-        return new Response(JSON.stringify({ received: true }), {
+        return new Response(JSON.stringify({ received: true, processed: 'payment.failed' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      case 'payment.cancelled': {
+        // Payment was cancelled by user or system
+        console.log('=== PAYMENT CANCELLED EVENT ===');
+        const userId = eventData.metadata?.user_id || eventData.customer?.metadata?.user_id;
+        const subscriptionId = eventData.subscription_id || eventData.subscription?.id;
+
+        if (userId && subscriptionId) {
+          console.log('Handling cancelled payment for user:', userId);
+          // Optionally mark subscription as cancelled or past_due
+          await supabaseClient
+            .from('users')
+            .update({
+              subscription_status: 'cancelled',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('subscription_id', subscriptionId);
+          
+          console.log('✅ Payment cancellation processed');
+        } else {
+          console.warn('⚠️ Missing user_id or subscription_id in payment.cancelled event');
+        }
+
+        return new Response(JSON.stringify({ received: true, processed: 'payment.cancelled' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       case 'subscription.failed':
       case 'subscription.on_hold': {
+        console.log('=== SUBSCRIPTION FAILED/ON_HOLD EVENT ===');
         const userId = eventData.metadata?.user_id || eventData.customer?.metadata?.user_id;
         const subscriptionId = eventData.subscription_id || eventData.id;
 
-        if (userId) {
+        if (userId && subscriptionId) {
+          console.log('Marking subscription as past_due for user:', userId);
           await supabaseClient
             .from('users')
             .update({
@@ -562,18 +526,24 @@ Deno.serve(async (req) => {
               updated_at: new Date().toISOString(),
             })
             .eq('subscription_id', subscriptionId);
+          
+          console.log('✅ Subscription status updated to past_due');
+        } else {
+          console.warn('⚠️ Missing user_id or subscription_id');
         }
 
-        return new Response(JSON.stringify({ received: true }), {
+        return new Response(JSON.stringify({ received: true, processed: eventType }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       case 'subscription.expired': {
+        console.log('=== SUBSCRIPTION EXPIRED EVENT ===');
         const userId = eventData.metadata?.user_id || eventData.customer?.metadata?.user_id;
         const subscriptionId = eventData.subscription_id || eventData.id;
 
-        if (userId) {
+        if (userId && subscriptionId) {
+          console.log('Marking subscription as inactive for user:', userId);
           await supabaseClient
             .from('users')
             .update({
@@ -581,21 +551,38 @@ Deno.serve(async (req) => {
               updated_at: new Date().toISOString(),
             })
             .eq('subscription_id', subscriptionId);
+          
+          console.log('✅ Subscription marked as expired');
+        } else {
+          console.warn('⚠️ Missing user_id or subscription_id');
         }
 
-        return new Response(JSON.stringify({ received: true }), {
+        return new Response(JSON.stringify({ received: true, processed: 'subscription.expired' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       case 'subscription.updated': {
         // Handle subscription updates (e.g., plan changes, billing updates)
+        console.log('=== SUBSCRIPTION UPDATED EVENT ===');
         const userId = eventData.metadata?.user_id || eventData.customer?.metadata?.user_id;
         const subscriptionId = eventData.subscription_id || eventData.id;
         const planId = eventData.metadata?.plan_id;
-        const billingPeriod = eventData.metadata?.billing_period;
+        let billingPeriod = eventData.metadata?.billing_period;
 
-        if (userId && planId && billingPeriod) {
+        if (!userId) {
+          console.warn('No user_id in subscription.updated event');
+          return new Response(JSON.stringify({ received: true, message: 'No user_id found' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // Normalize billing period
+        if (billingPeriod) {
+          billingPeriod = billingPeriod === 'annually' ? 'annual' : billingPeriod;
+        }
+
+        if (planId && billingPeriod) {
           // Calculate credits based on plan
           const creditsMap: Record<string, number> = {
             'starter-monthly': 30,
@@ -603,7 +590,10 @@ Deno.serve(async (req) => {
             'pro-monthly': 100,
             'pro-annual': 1200,
           };
-          const credits = creditsMap[`${planId}-${billingPeriod}`] || 30;
+          const planKey = `${planId}-${billingPeriod}`;
+          const credits = creditsMap[planKey] || 30;
+
+          console.log('Updating subscription for user:', userId, 'to plan:', planKey, 'credits:', credits);
 
           await supabaseClient
             .from('users')
@@ -614,9 +604,13 @@ Deno.serve(async (req) => {
               updated_at: new Date().toISOString(),
             })
             .eq('subscription_id', subscriptionId);
+
+          console.log('✅ Subscription updated successfully');
+        } else {
+          console.log('⚠️ Insufficient data to update subscription - plan_id or billing_period missing');
         }
 
-        return new Response(JSON.stringify({ received: true }), {
+        return new Response(JSON.stringify({ received: true, processed: 'subscription.updated' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
