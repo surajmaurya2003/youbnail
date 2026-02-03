@@ -56,16 +56,22 @@ async function verifyWebhookSignature(
     );
 
     const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
-    const computedHash = Array.from(new Uint8Array(signatureBuffer))
+    
+    // DodoPayments uses base64 encoding, not hex
+    const computedHashBase64 = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)));
+    
+    // Also compute hex for debugging
+    const computedHashHex = Array.from(new Uint8Array(signatureBuffer))
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
     // Constant-time comparison to prevent timing attacks
-    const isValid = computedHash === receivedHash;
+    const isValid = computedHashBase64 === receivedHash;
     
     if (!isValid) {
       console.error('Signature verification failed');
-      console.error('Expected:', computedHash);
+      console.error('Expected (base64):', computedHashBase64);
+      console.error('Expected (hex):', computedHashHex);
       console.error('Received:', receivedHash);
     }
 
@@ -211,7 +217,7 @@ Deno.serve(async (req) => {
         // Normalize billing period just in case
         const normalizedBillingPeriod = billingPeriod === 'annually' ? 'annual' : billingPeriod;
         const subscriptionId = eventData.subscription_id || eventData.subscription?.id || eventData.id;
-        const productId = eventData.product_id || eventData.subscription?.product_id;
+        const productId = eventData.product_id || eventData.subscription?.product_id || event.data?.product_id;
 
         if (!userId) {
           console.error('No user_id in payment.succeeded event');
@@ -371,7 +377,7 @@ Deno.serve(async (req) => {
         const planId = eventData.metadata?.plan_id || 'starter';
         const billingPeriod = eventData.metadata?.billing_period || 'monthly';
         const subscriptionId = eventData.subscription_id || eventData.id;
-        const productId = eventData.product_id;
+        const productId = eventData.product_id || event.data?.product_id;
 
         if (!userId) {
           console.error('No user_id in webhook event');
