@@ -161,6 +161,39 @@ Deno.serve(async (req) => {
       // If successful, we're done
       if (cancelResponse.ok) {
         console.log("Successfully cancelled subscription in DodoPayments");
+        
+        const cancelledAt = new Date().toISOString();
+        
+        // Update users table
+        const { error: userUpdateError } = await supabaseClient
+          .from("users")
+          .update({
+            subscription_status: "cancelled",
+            updated_at: cancelledAt,
+          })
+          .eq("id", userId);
+        
+        if (userUpdateError) {
+          console.error("Failed to update users table:", userUpdateError);
+        }
+        
+        // Update subscription_history table
+        const { error: historyUpdateError } = await supabaseClient
+          .from("subscription_history")
+          .update({
+            status: "cancelled",
+            cancelled_at: cancelledAt,
+          })
+          .eq("user_id", userId)
+          .eq("subscription_id", user.subscription_id)
+          .is("cancelled_at", null);
+        
+        if (historyUpdateError) {
+          console.error("Failed to update subscription_history table:", historyUpdateError);
+        } else {
+          console.log("Successfully updated subscription_history table");
+        }
+        
         return new Response(
           JSON.stringify({ success: true, message: "Subscription cancelled successfully" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -180,22 +213,48 @@ Deno.serve(async (req) => {
     console.error("DodoPayments cancellation failed:", cancelError);
     console.log("Marking subscription as cancelled in database despite API error");
     
-    await supabaseClient
+    const cancelledAt = new Date().toISOString();
+    
+    // Update users table
+    const { error: userUpdateError } = await supabaseClient
         .from("users")
         .update({
           subscription_status: "cancelled",
-          updated_at: new Date().toISOString(),
+          updated_at: cancelledAt,
         })
         .eq("id", userId);
+    
+    if (userUpdateError) {
+      console.error("Failed to update users table:", userUpdateError);
+      throw new Error("Failed to update user subscription status");
+    }
+    
+    // Update subscription_history table
+    const { error: historyUpdateError } = await supabaseClient
+        .from("subscription_history")
+        .update({
+          status: "cancelled",
+          cancelled_at: cancelledAt,
+        })
+        .eq("user_id", userId)
+        .eq("subscription_id", user.subscription_id)
+        .is("cancelled_at", null); // Only update records that haven't been cancelled yet
+    
+    if (historyUpdateError) {
+      console.error("Failed to update subscription_history table:", historyUpdateError);
+      // Don't throw - user table is already updated, just log the error
+    } else {
+      console.log("Successfully updated subscription_history table");
+    }
       
-      return new Response(
-        JSON.stringify({ 
-          success: true,
-          message: "Subscription marked as cancelled in our system. Note: There was an issue communicating with the payment provider. Please verify cancellation in your DodoPayments dashboard or contact support.",
-          warning: cancelError 
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    return new Response(
+      JSON.stringify({ 
+        success: true,
+        message: "Subscription marked as cancelled in our system. Note: There was an issue communicating with the payment provider. Please verify cancellation in your DodoPayments dashboard or contact support.",
+        warning: cancelError 
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (error: any) {
     console.error("Error in cancel-subscription function:", error);
     return new Response(
