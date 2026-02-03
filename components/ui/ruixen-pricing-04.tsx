@@ -60,8 +60,15 @@ export default function Pricing_04({ user, isUpdatingPlan, setIsUpdatingPlan }: 
       return;
     }
 
-    if (isUpdatingPlan) return;
-    setIsUpdatingPlan?.(`${plan.id}-${billingPeriod}`);
+    // Prevent double-clicks - immediately set loading state
+    if (isUpdatingPlan) {
+      console.log('Already updating plan, ignoring click');
+      return;
+    }
+    
+    const planKey = `${plan.id}-${billingPeriod}`;
+    setIsUpdatingPlan?.(planKey);
+    console.log('Setting isUpdatingPlan to:', planKey);
 
     // Determine change type for payment adjustment
     const isUpgrade = (user.plan === 'free' || (user.plan === 'starter' && plan.id === 'pro'));

@@ -148,6 +148,38 @@ Deno.serve(async (req) => {
       );
     }
     
+    // DUPLICATE CHECKOUT PREVENTION: Check for recent checkout creation
+    // Use a global Map to track checkout requests (in-memory, per edge function instance)
+    const CHECKOUT_COOLDOWN = 5000; // 5 seconds cooldown between checkouts
+    const checkoutKey = `${userId}-${planId}-${billingPeriod}`;
+    const now = Date.now();
+    
+    // Simple in-memory rate limiting (will reset on edge function restart, but that's fine)
+    const recentCheckouts = (globalThis as any).__recentCheckouts || new Map();
+    (globalThis as any).__recentCheckouts = recentCheckouts;
+    
+    const lastCheckoutTime = recentCheckouts.get(checkoutKey);
+    if (lastCheckoutTime && (now - lastCheckoutTime) < CHECKOUT_COOLDOWN) {
+      console.warn('Duplicate checkout attempt detected within cooldown period');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Please wait a moment before creating another checkout',
+          code: 'RATE_LIMITED'
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Mark this checkout as in-progress
+    recentCheckouts.set(checkoutKey, now);
+    
+    // Clean up old entries (older than 1 minute)
+    for (const [key, time] of recentCheckouts.entries()) {
+      if (now - time > 60000) {
+        recentCheckouts.delete(key);
+      }
+    }
+    
     // Get user data from Supabase (including subscription info)
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
     

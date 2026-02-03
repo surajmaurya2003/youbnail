@@ -504,19 +504,19 @@ const AppWithToast: React.FC = () => {
 
     // Free users must choose a plan first
     if (user.plan === 'free') {
-      alert("Please choose a plan to continue generating thumbnails.");
+      showWarning('Choose a Plan', 'Please choose a plan to continue generating thumbnails.');
       navigateToTab('plans');
       return;
     }
 
     if (isPartialUpdate && user.plan === 'starter') {
-      alert("Selective Editing is a Pro feature. Please upgrade your plan.");
+      showWarning('Pro Feature', 'Selective Editing is a Pro feature. Please upgrade your plan.');
       navigateToTab('plans');
       return;
     }
 
     if (user.credits <= 0) {
-      alert("You've run out of credits!");
+      showError('Out of Credits', "You've run out of credits! Please upgrade your plan.");
       navigateToTab('plans');
       return;
     }
@@ -527,7 +527,7 @@ const AppWithToast: React.FC = () => {
     const baseImg = isPartialUpdate ? generatedThumb : refImage;
 
     if (!currentPrompt && !baseImg) {
-      alert("Please provide a description or a base image.");
+      showWarning('Missing Input', 'Please provide a description or a base image.');
       return;
     }
 
@@ -535,21 +535,21 @@ const AppWithToast: React.FC = () => {
     if (currentPrompt) {
       // Validate prompt length
       if (currentPrompt.length > 2000) {
-        alert("Prompt is too long. Maximum 2000 characters allowed.");
+        showWarning('Text Too Long', 'Prompt is too long. Maximum 2000 characters allowed.');
         return;
       }
       
       // Basic sanitization (additional protection)
       const sanitizedPrompt = currentPrompt.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
       if (sanitizedPrompt.length !== currentPrompt.length) {
-        alert("Invalid characters detected in prompt. Please remove any script tags.");
+        showError('Invalid Input', 'Invalid characters detected in prompt. Please remove any script tags.');
         return;
       }
     }
 
     // Validate overlay text if provided
     if (options.overlayText && options.overlayText.length > 100) {
-      alert("Overlay text is too long. Maximum 100 characters allowed.");
+      showWarning('Text Too Long', 'Overlay text is too long. Maximum 100 characters allowed.');
       return;
     }
 
@@ -769,7 +769,7 @@ const AppWithToast: React.FC = () => {
         errorMessage = 'Network error. Please check your connection and try again.';
       }
       
-      alert(errorMessage);
+      showError('Generation Failed', errorMessage);
       setGenerationProgress(0);
       setIsGenerating(false);
     }
@@ -781,10 +781,10 @@ const AppWithToast: React.FC = () => {
       const newCredits = user.credits + amount;
       await userService.updateCredits(user.id, newCredits);
       setUser(prev => prev ? ({ ...prev, credits: newCredits }) : null);
-      alert(`Successfully added ${amount} credits!`);
+      showSuccess('Credits Added', `Successfully added ${amount} credits!`);
     } catch (error) {
       console.error('Failed to add credits');
-      alert('Failed to add credits. Please try again.');
+      showError('Failed', 'Failed to add credits. Please try again.');
     }
   };
 
@@ -918,10 +918,10 @@ const AppWithToast: React.FC = () => {
         email: emailValue,
       });
       setUser(prev => prev ? { ...prev, name: nameValue, email: emailValue } : null);
-      alert('Profile updated!');
+      showSuccess('Success', 'Profile updated successfully!');
     } catch (error) {
       console.error('Profile update failed');
-      alert('Failed to update profile. Please try again.');
+      showError('Update Failed', 'Failed to update profile. Please try again.');
     }
   };
 
@@ -930,7 +930,7 @@ const AppWithToast: React.FC = () => {
     
     // Check if user is on starter or free plan
     if (user.plan === 'starter' || user.plan === 'free') {
-      alert('👑 Edit feature is exclusively for Pro users!\n\nUpgrade to Pro to unlock powerful editing capabilities and transform your thumbnails like a king! 🎨✨');
+      showAlert('Pro Feature Required', '👑 Edit feature is exclusively for Pro users!\n\nUpgrade to Pro to unlock powerful editing capabilities and transform your thumbnails like a king! 🎨✨', 'warning');
       // Optionally navigate to plans tab
       navigateToTab('plans');
       return;
@@ -960,7 +960,7 @@ const AppWithToast: React.FC = () => {
         throw new Error(data.error || 'Failed to cancel subscription');
       }
       
-      alert('✅ Your cancellation request has been submitted. Your subscription will not renew.');
+      showSuccess('Subscription Cancelled', 'Your cancellation request has been submitted. Your subscription will not renew.');
       
       // Refresh user data to show updated status
       setTimeout(async () => {
@@ -972,7 +972,7 @@ const AppWithToast: React.FC = () => {
     } catch (err: any) {
       console.error('Subscription cancellation failed');
       const errorMessage = err.message || err.error || 'Failed to cancel subscription. Please try again or contact support.';
-      alert(`❌ Error: ${errorMessage}`);
+      showError('Cancellation Failed', errorMessage);
     } finally {
       setIsCancellingSubscription(false);
     }
@@ -983,11 +983,11 @@ const AppWithToast: React.FC = () => {
     const maxBytes = 10 * 1024 * 1024;
     const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(file.name);
     if (!isImage) {
-      alert('Please upload a JPEG, PNG, or WebP image.');
+      showWarning('Invalid File Type', 'Please upload a JPEG, PNG, or WebP image.');
       return;
     }
     if (file.size > maxBytes) {
-      alert('Image is too large. Max 10MB.');
+      showWarning('File Too Large', 'Image is too large. Maximum size is 10MB.');
       return;
     }
     const reader = new FileReader();
@@ -2655,7 +2655,7 @@ const AppWithToast: React.FC = () => {
                           disabled={isCancellingSubscription || !user.subscription_id}
                           onClick={() => {
                             if (!user.subscription_id) {
-                              alert('No subscription ID found. Please contact support to cancel your subscription.');
+                              showError('No Subscription', 'No subscription ID found. Please contact support to cancel your subscription.');
                               return;
                             }
                             setShowCancelModal(true);
