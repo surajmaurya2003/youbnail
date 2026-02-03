@@ -135,7 +135,8 @@ Deno.serve(async (req) => {
       dodoApiMode: dodoApiMode,
       dodoApiModeEnvSet: !!Deno.env.get("DODO_API_MODE"),
       dodoBaseUrl: dodoBaseUrl,
-      fullUrl: `${dodoBaseUrl}/v1/subscriptions/${user.subscription_id}/cancel`,
+      fullUrl: `${dodoBaseUrl}/subscriptions/${user.subscription_id}`,
+      method: "PATCH",
       apiKeyPresent: !!dodoApiKey,
       apiKeyLength: dodoApiKey?.length || 0
     });
@@ -146,7 +147,7 @@ Deno.serve(async (req) => {
     let subscriptionExistsInDodo = false;
     
     try {
-      const verifyResponse = await fetch(`${dodoBaseUrl}/v1/subscriptions/${user.subscription_id}`, {
+      const verifyResponse = await fetch(`${dodoBaseUrl}/subscriptions/${user.subscription_id}`, {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${dodoApiKey}`,
@@ -183,18 +184,20 @@ Deno.serve(async (req) => {
     let cancelError = null;
     
     if (subscriptionExistsInDodo) {
-      // Try the correct DodoPayments API endpoint (PATCH, not POST to /cancel)
+      // Call DodoPayments API to cancel subscription using PATCH method
+      // Options: cancel_at_next_billing_date (true = cancel at period end, false/omit = immediate)
       try {
         console.log("Step 2: Calling DodoPayments API to cancel subscription...");
-        cancelResponse = await fetch(`${dodoBaseUrl}/v1/subscriptions/${user.subscription_id}`, {
+        console.log("Using immediate cancellation (cancel_at_next_billing_date: false)");
+        
+        cancelResponse = await fetch(`${dodoBaseUrl}/subscriptions/${user.subscription_id}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${dodoApiKey}`,
           },
           body: JSON.stringify({
-            cancel_at_next_billing_date: true,
-            status: "cancelled"
+            cancel_at_next_billing_date: false, // Immediate cancellation
           }),
         });
       
