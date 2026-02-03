@@ -286,21 +286,26 @@ Deno.serve(async (req) => {
         if (subscriptionId) {
           console.log('Recording subscription history...');
           
-          // Check if this subscription already has a history record to prevent duplicates
+          // Check if this subscription already has a recent history record to prevent duplicates
+          // Check for records created within the last 5 seconds with same subscription and product
+          const fiveSecondsAgo = new Date(Date.now() - 5000).toISOString();
           const { data: existingHistory, error: checkError } = await supabaseClient
             .from('subscription_history')
-            .select('id')
+            .select('id, created_at')
             .eq('user_id', userId)
             .eq('subscription_id', subscriptionId)
+            .eq('product_id', productId)
+            .eq('billing_period', normalizedBillingPeriod)
             .eq('status', 'active')
+            .gte('created_at', fiveSecondsAgo)
             .maybeSingle();
           
-          if (checkError) {
+          if (checkError && checkError.code !== 'PGRST116') {
             console.error('Error checking existing subscription history:', checkError);
           }
           
           if (existingHistory) {
-            console.log('Subscription history already exists, skipping duplicate insert');
+            console.log('Subscription history already exists (created', existingHistory.created_at, '), skipping duplicate insert');
           } else {
             const historyInsert = {
               user_id: userId,
@@ -425,21 +430,26 @@ Deno.serve(async (req) => {
         // Record in subscription history - check for duplicates first
         console.log('Recording subscription history...');
         
-        // Check if this subscription already has a history record to prevent duplicates
+        // Check if this subscription already has a recent history record to prevent duplicates
+        // Check for records created within the last 5 seconds with same subscription and product
+        const fiveSecondsAgo = new Date(Date.now() - 5000).toISOString();
         const { data: existingHistory, error: checkError } = await supabaseClient
           .from('subscription_history')
-          .select('id')
+          .select('id, created_at')
           .eq('user_id', userId)
           .eq('subscription_id', subscriptionId)
+          .eq('product_id', productId)
+          .eq('billing_period', billingPeriod)
           .eq('status', 'active')
+          .gte('created_at', fiveSecondsAgo)
           .maybeSingle();
         
-        if (checkError) {
+        if (checkError && checkError.code !== 'PGRST116') {
           console.error('Error checking existing subscription history:', checkError);
         }
         
         if (existingHistory) {
-          console.log('Subscription history already exists (likely from payment.succeeded), skipping duplicate insert');
+          console.log('Subscription history already exists (created', existingHistory.created_at, ', likely from payment.succeeded), skipping duplicate insert');
         } else {
           const historyInsert = {
             user_id: userId,
