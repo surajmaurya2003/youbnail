@@ -24,15 +24,22 @@ async function verifyWebhookSignature(
   }
 
   try {
-    // DodoPayments typically uses HMAC SHA-256 for webhook signatures
-    // Format is usually: sha256=<hash>
-    const signatureParts = signature.split('=');
-    const algorithm = signatureParts[0];
-    const receivedHash = signatureParts[1] || signature;
-
-    if (algorithm !== 'sha256' && signatureParts.length > 1) {
-      console.error('Unsupported signature algorithm:', algorithm);
-      return false;
+    // DodoPayments uses format: v1,<hash> or sha256=<hash>
+    let receivedHash = signature;
+    
+    if (signature.includes(',')) {
+      // Format: v1,<hash>
+      const parts = signature.split(',');
+      receivedHash = parts[1];
+      console.log('DodoPayments signature format: v1,<hash>');
+    } else if (signature.includes('=')) {
+      // Format: sha256=<hash>
+      const parts = signature.split('=');
+      receivedHash = parts[1];
+      console.log('Signature format: sha256=<hash>');
+    } else {
+      // Plain hash
+      console.log('Plain hash signature format');
     }
 
     // Create HMAC SHA-256 hash
