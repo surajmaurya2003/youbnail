@@ -155,18 +155,43 @@ export const authService = {
       throw new Error('Google account is not linked');
     }
 
-    // Check if user has email/password authentication  
-    // Since we only use magic link and social login, we need to ensure user has email access
+    // Check if user has email access for fallback authentication
     const hasEmailAccess = user.email;
     
     if (!hasEmailAccess) {
       throw new Error('Cannot unlink Google account without email access for magic link authentication.');
     }
 
-    // Note: Supabase client doesn't support unlinking providers directly
-    // This requires admin API access. For now, we'll provide guidance
-    // In production, you'd need a backend endpoint to handle this
-    throw new Error('To unlink Google, please contact support or ensure you have a password set. You can then sign in with email/password instead of Google.');
+    try {
+      // Get current session for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No active session found');
+      }
+
+      // Call the edge function to unlink Google account
+      const { data, error } = await supabase.functions.invoke('unlink-google', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to unlink Google account');
+      }
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      return data;
+    } catch (error: any) {
+      // Fallback error message for better user experience
+      if (error.message.includes('edge function')) {
+        throw new Error('To unlink Google, please contact support or ensure you have a password set. You can then sign in with email/password instead of Google.');
+      }
+      throw error;
+    }
   },
 
   onAuthStateChange(callback: (user: any) => void) {

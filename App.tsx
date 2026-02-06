@@ -1333,7 +1333,7 @@ const AppWithToast: React.FC = () => {
         <div className="w-full px-4 h-16 flex items-center justify-between">
           <div className="cursor-pointer group" onClick={() => navigateToTab('create')}>
             <img 
-              src="https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/1.png" 
+              src="https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/1.png" 
               alt="Youbnail" 
               className="h-10 w-auto object-contain transition-all group-hover:scale-105"
             />
@@ -1532,7 +1532,7 @@ const AppWithToast: React.FC = () => {
                   <div className="text-sm font-semibold text-center" style={{color: 'var(--text-muted)'}}>Before</div>
                   <div className="relative rounded-xl overflow-hidden border" style={{borderColor: 'var(--border-primary)', aspectRatio: '16/9'}}>
                     <img 
-                      src="https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/before.png" 
+                      src="https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/before.png" 
                       alt="Before thumbnail"
                       className="w-full h-full object-cover"
                       onError={(e) => {
@@ -1548,7 +1548,7 @@ const AppWithToast: React.FC = () => {
                   <div className="text-sm font-semibold text-center" style={{color: 'var(--text-muted)'}}>After</div>
                   <div className="relative rounded-xl overflow-hidden border" style={{borderColor: 'var(--border-primary)', aspectRatio: '16/9'}}>
                     <img 
-                      src="https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/after.png"
+                      src="https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/after.png"
                       alt="After thumbnail"
                       className="w-full h-full object-cover transition-opacity duration-500"
                     />

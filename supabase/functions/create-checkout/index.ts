@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     const appUrl = Deno.env.get('APP_URL') || 'http://localhost:3000';
     
     // These are automatically provided by Supabase Edge Runtime
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://wawfgjzpwykvjgmuaueb.supabase.co';
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://ohbrdgolasejewtcbojt.supabase.co';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_ANON_KEY') || '';
     
     console.log('Environment check:', {

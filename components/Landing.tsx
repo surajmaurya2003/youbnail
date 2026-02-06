@@ -226,7 +226,7 @@ export const Landing: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <img 
-              src="https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/1.png" 
+              src="https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/1.png" 
               alt="Youbnail" 
               className="h-10"
             />
@@ -283,7 +283,7 @@ export const Landing: React.FC = () => {
                style={{background: 'var(--bg-primary)', borderLeft: '1px solid rgba(255, 255, 255, 0.1)'}}>
             <div className="flex items-center justify-between p-4 sm:p-6 border-b" style={{borderColor: 'rgba(255, 255, 255, 0.1)'}}>
               <img 
-                src="https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/1.png" 
+                src="https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/1.png" 
                 alt="Youbnail" 
                 className="h-8"
               />
@@ -539,26 +539,26 @@ export const Landing: React.FC = () => {
               { 
                 category: 'GAMING', 
                 description: 'Eye-catching thumbnails with high contrast and dynamic elements perform better than simple screenshots.',
-                beforeImage: 'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/gaming%20before.png',
-                afterImage: 'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/gaming%20after.png'
+                beforeImage: 'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/gaming%20before.png',
+                afterImage: 'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/gaming%20after.png'
               },
               { 
                 category: 'TECH', 
                 description: 'Clean, professional designs with clear product focus outperform cluttered or amateur designs.',
-                beforeImage: 'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/tech%20before.png',
-                afterImage: 'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/tech%20after.png'
+                beforeImage: 'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/tech%20before.png',
+                afterImage: 'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/tech%20after.png'
               },
               { 
                 category: 'LIFESTYLE', 
                 description: 'Bright, aspirational thumbnails with good composition draw more clicks than casual photos.',
-                beforeImage: 'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/lifestyle%20before.png',
-                afterImage: 'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/lifestyle%20after.png'
+                beforeImage: 'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/lifestyle%20before.png',
+                afterImage: 'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/lifestyle%20after.png'
               },
               { 
                 category: 'EDUCATION', 
                 description: 'Clear, organized thumbnails with readable text perform better than text-heavy or unclear designs.',
-                beforeImage: 'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/education%20before.png',
-                afterImage: 'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/education%20after.png'
+                beforeImage: 'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/education%20before.png',
+                afterImage: 'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/thumbnails%20before%20after/education%20after.png'
               }
             ].map((example, i) => (
               <div key={i} className="card p-6 hover:shadow-lg transition-all duration-300">
@@ -852,7 +852,7 @@ export const Landing: React.FC = () => {
               <div className="order-2 lg:order-1">
                 <div className="rounded-xl overflow-hidden" style={{border: '2px solid var(--border-primary)'}}>
                   <img 
-                    src="https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/The%20AI%20That%20Studied%20Successful%20Viral%20Thumbnails%20So%20You%20Don't%20Have%20To.gif"
+                    src="https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/The%20AI%20That%20Studied%20Successful%20Viral%20Thumbnails%20So%20You%20Don't%20Have%20To.gif"
                     alt="The AI That Studied Successful Viral Thumbnails So You Don't Have To"
                     className="w-full h-auto"
                     loading="lazy"
@@ -941,7 +941,7 @@ export const Landing: React.FC = () => {
               <div>
                 <div className="rounded-xl overflow-hidden" style={{border: '2px solid var(--border-primary)'}}>
                   <img 
-                    src="https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/Turn%20Any%20Video%20Frame%20Into%20a%20Scroll-Stopping%20Thumbnail%20in%204%20Clicks%20(1).gif"
+                    src="https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/Turn%20Any%20Video%20Frame%20Into%20a%20Scroll-Stopping%20Thumbnail%20in%204%20Clicks%20(1).gif"
                     alt="Turn Any Video Frame Into a Scroll-Stopping Thumbnail in 4 Clicks"
                     className="w-full h-auto"
                     loading="lazy"
@@ -955,7 +955,7 @@ export const Landing: React.FC = () => {
               <div className="order-2 lg:order-1">
                 <div className="rounded-xl overflow-hidden" style={{border: '2px solid var(--border-primary)'}}>
                   <img 
-                    src="https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/Clone%20Any%20Style.%20Keep%20Your%20Brand.%20Never%20Plagiarize..gif"
+                    src="https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/Clone%20Any%20Style.%20Keep%20Your%20Brand.%20Never%20Plagiarize..gif"
                     alt="Clone Any Style. Keep Your Brand. Never Plagiarize."
                     className="w-full h-auto"
                     loading="lazy"
@@ -1215,7 +1215,7 @@ export const Landing: React.FC = () => {
             {/* Brand */}
             <div>
               <img 
-                src="https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/1.png" 
+                src="https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/1.png" 
                 alt="Youbnail" 
                 className="h-10 mb-4"
               />

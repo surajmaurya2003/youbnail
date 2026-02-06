@@ -120,18 +120,18 @@ export interface Theme {
 
 // Showcase Images for Landing Page
 export const SHOWCASE_IMAGES = [
-  'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/Generated%20Image%20December%2024,%202025%20-%201_12AM.jpeg',
-  'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/Generated%20Image%20December%2024,%202025%20-%201_12AM%20(1).jpeg',
-  'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/Generated%20Image%20December%2024,%202025%20-%201_11AM%20(1).jpeg',
-  'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/czarthumbnail3.jpeg',
-  'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnaile%20December%2030,%202025%20-%2010_43AM.jpeg',
-  'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnaile%20December%2030,%202025%20-%2010_42AM%20(3).jpeg',
-  'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnaile%20December%2030,%202025%20-%2010_42AM%20(1).jpeg',
-  'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnaile%20December%2030,%202025%20-%2010_40AM.jpeg',
-  'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnail1%20January%2007,%202026%20-%2010_06AM%20(4).jpeg',
-  'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnail1%20January%2007,%202026%20-%2010_06AM%20(3).jpeg',
-  'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnail1%20January%2007,%202026%20-%2010_06AM%20(2).jpeg',
-  'https://wawfgjzpwykvjgmuaueb.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnail1%20January%2007,%202026%20-%2010_05AM.jpeg'
+  'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/internal/Generated%20Image%20December%2024,%202025%20-%201_12AM.jpeg',
+  'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/internal/Generated%20Image%20December%2024,%202025%20-%201_12AM%20(1).jpeg',
+  'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/internal/Generated%20Image%20December%2024,%202025%20-%201_11AM%20(1).jpeg',
+  'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/internal/czarthumbnail3.jpeg',
+  'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnaile%20December%2030,%202025%20-%2010_43AM.jpeg',
+  'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnaile%20December%2030,%202025%20-%2010_42AM%20(3).jpeg',
+  'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnaile%20December%2030,%202025%20-%2010_42AM%20(1).jpeg',
+  'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnaile%20December%2030,%202025%20-%2010_40AM.jpeg',
+  'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnail1%20January%2007,%202026%20-%2010_06AM%20(4).jpeg',
+  'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnail1%20January%2007,%202026%20-%2010_06AM%20(3).jpeg',
+  'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnail1%20January%2007,%202026%20-%2010_06AM%20(2).jpeg',
+  'https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/internal/czarnewthumbnail1%20January%2007,%202026%20-%2010_05AM.jpeg'
 ];
 
 export const THEMES: Theme[] = [

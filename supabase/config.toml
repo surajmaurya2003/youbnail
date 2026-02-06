@@ -32,3 +32,8 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/cancel-subscription/deno.json"
 entrypoint = "./functions/cancel-subscription/index.ts"
+
+[functions.unlink-google]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/unlink-google/index.ts"
