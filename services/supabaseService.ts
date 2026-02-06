@@ -261,7 +261,7 @@ export const userService = {
           email: updates.email || '',
           name: updates.name || 'User',
           credits: updates.credits ?? 10,
-          plan: updates.plan || 'starter',
+          plan: updates.plan || 'free',
           avatar_url: updates.avatar,
         })
         .select()

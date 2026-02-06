@@ -522,12 +522,8 @@ const AppWithToast: React.FC = () => {
       return;
     }
 
-    // For Creator plans, all users have access to all features
-    if (isPartialUpdate) {
-      showWarning('Pro Feature', 'Selective Editing is a Pro feature. Please upgrade your plan.');
-      navigateToTab('plans');
-      return;
-    }
+    // For Creator plans, all users have access to all features including selective editing
+    // No restrictions for Creator plan users
 
     if (user.credits <= 0) {
       showError('Out of Credits', "You've run out of credits! Please upgrade your plan.");
@@ -943,15 +939,15 @@ const AppWithToast: React.FC = () => {
   const handleEditButtonClick = () => {
     if (!user) return;
     
-    // Check if user is on starter or free plan
+    // Check if user is on free plan
     if (user.plan === 'free') {
-      showAlert('Pro Feature Required', '👑 Edit feature is exclusively for Pro users!\n\nUpgrade to Pro to unlock powerful editing capabilities and transform your thumbnails like a king! 🎨✨', 'warning');
+      showAlert('Creator Feature Required', '👑 Edit feature is exclusively for Creator users!\n\nUpgrade to Creator plan to unlock powerful editing capabilities and transform your thumbnails like a king! 🎨✨', 'warning');
       // Optionally navigate to plans tab
       navigateToTab('plans');
       return;
     }
     
-    // Enable edit mode for Pro users
+    // Enable edit mode for Creator users
     setIsEditMode(true);
   };
 

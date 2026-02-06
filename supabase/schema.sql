@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   email TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
   credits INTEGER NOT NULL DEFAULT 0,
-  plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'starter', 'creator-monthly', 'creator-yearly')),
+  plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'creator-monthly', 'creator-yearly')),
   avatar_url TEXT,
   subscription_id TEXT,
   subscription_status TEXT,

@@ -319,7 +319,7 @@ Deno.serve(async (req) => {
         
         // Get user ID from metadata
         const userId = eventData.metadata?.user_id || eventData.customer?.metadata?.user_id;
-        let planId = eventData.metadata?.plan_id || 'starter';
+        let planId = eventData.metadata?.plan_id || 'free';
         let billingPeriod = eventData.metadata?.billing_period || 'monthly';
         
         // Product ID to plan mapping for security validation

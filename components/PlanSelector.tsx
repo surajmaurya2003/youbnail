@@ -18,9 +18,9 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({ currentPlan, onSelec
             currentPlan === plan.id 
               ? 'border-gray-600 bg-gray-100' 
               : 'border-gray-200 hover:border-red-300'
-          } ${plan.id === 'pro' ? 'relative overflow-hidden' : ''}`}
+          } ${plan.popular ? 'relative overflow-hidden' : ''}`}
         >
-          {plan.id === 'pro' && (
+          {plan.popular && (
             <div className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-4 py-1 transform translate-x-2 -translate-y-1">
               POPULAR
             </div>
@@ -32,14 +32,14 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({ currentPlan, onSelec
             </h3>
             <div className="flex items-baseline justify-center mb-4">
               <span className="text-4xl font-bold" style={{color: 'var(--accent-primary)'}}>
-                {plan.price}
+                ${plan.priceMonthly}
               </span>
               <span className="text-lg ml-2" style={{color: 'var(--text-muted)'}}>
                 /month
               </span>
             </div>
             <div className="inline-block px-4 py-2 rounded-full text-sm font-medium" style={{background: 'var(--accent-light)', color: 'var(--accent-primary)'}}>
-              {plan.credits} credits included
+              {plan.creditsMonthly} credits included
             </div>
           </div>
           
@@ -49,7 +49,7 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({ currentPlan, onSelec
                 <svg className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" style={{color: 'var(--accent-primary)'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
-                <span style={{color: 'var(--text-secondary)'}}>{feature}</span>
+                <span style={{color: 'var(--text-secondary)'}}>{feature.name}</span>
               </li>
             ))}
           </ul>
@@ -60,7 +60,7 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({ currentPlan, onSelec
             className={`w-full py-4 rounded-lg font-semibold text-sm transition-all ${
               currentPlan === plan.id
                 ? 'cursor-default opacity-60 bg-gray-100 text-gray-500'
-                : plan.id === 'pro' 
+                : plan.popular 
                   ? 'bg-red-600 text-white hover:bg-red-700 shadow-lg'
                   : 'bg-black text-white hover:bg-gray-900'
             }`}
