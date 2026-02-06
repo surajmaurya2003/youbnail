@@ -50,10 +50,7 @@ export default function Pricing_04({ user, isUpdatingPlan, setIsUpdatingPlan }: 
     }
 
     // Check if this is the current plan
-    const currentBilling = user?.subscription_billing_period || 'monthly';
-    const normalizedBilling = billingPeriod === 'annually' ? 'annual' : billingPeriod;
-    const normalizedCurrentBilling = currentBilling === 'annually' ? 'annual' : currentBilling;
-    const isCurrentPlan = user?.plan === plan.id && normalizedCurrentBilling === normalizedBilling;
+    const isCurrentPlan = user?.plan === plan.id;
     
     if (isCurrentPlan) {
       showInfo('Already on Plan', 'You are already on this plan');
@@ -66,22 +63,21 @@ export default function Pricing_04({ user, isUpdatingPlan, setIsUpdatingPlan }: 
       return;
     }
     
-    const planKey = `${plan.id}-${billingPeriod}`;
-    setIsUpdatingPlan?.(planKey);
-    console.log('Setting isUpdatingPlan to:', planKey);
+    setIsUpdatingPlan?.(plan.id);
+    console.log('Setting isUpdatingPlan to:', plan.id);
 
-    // Determine change type for payment adjustment
-    const isUpgrade = (user.plan === 'free' || (user.plan === 'starter' && plan.id === 'pro'));
-    const isDowngrade = user.plan === 'pro' && plan.id === 'starter';
-    const isBillingChange = user.plan === plan.id && normalizedCurrentBilling !== normalizedBilling;
+    // For Creator plans - no concept of upgrade/downgrade, just plan switching
+    const isUpgrade = false;
+    const isDowngrade = false;
+    const isBillingChange = false;
     
     // Check if user has active subscription for prorating
     const hasActiveSubscription = user.subscription_status === 'active' && user.subscription_id;
     
     const continueWithPlan = async () => {
       try {
-        // Normalize billing period for backend (annually -> annual)
-        const normalizedBillingPeriod = billingPeriod === 'annually' ? 'annual' : billingPeriod;
+        // Set billing period based on plan ID
+        const normalizedBillingPeriod = plan.id === 'creator-yearly' ? 'annual' : 'monthly';
 
         // Get fresh session and token
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -89,9 +85,8 @@ export default function Pricing_04({ user, isUpdatingPlan, setIsUpdatingPlan }: 
           throw new Error('Authentication session expired. Please sign in again.');
         }
 
-        console.log('Making checkout request for user:', user.id, 'plan:', plan.id);
+        console.log('Making checkout request for plan:', plan.id);
         console.log('Session status:', session ? 'valid' : 'invalid');
-        console.log('Access token length:', session.access_token ? session.access_token.length : 0);
         
         // Call Supabase Edge Function to create checkout session
         const { data: sessionData, error: checkoutError } = await supabase.functions.invoke('create-checkout', {
@@ -143,6 +138,29 @@ export default function Pricing_04({ user, isUpdatingPlan, setIsUpdatingPlan }: 
       }
     };
     
+    // Show confirmation for plan changes with active subscription
+    if (hasActiveSubscription && user.plan !== plan.id) {
+      const currentPlanName = user.plan === 'creator-monthly' ? 'Creator Monthly' : 'Creator Yearly';
+      const newPlanName = plan.id === 'creator-monthly' ? 'Creator Monthly' : 'Creator Yearly';
+      const billingChange = user.plan.includes('monthly') !== plan.id.includes('monthly');
+      
+      showConfirm(
+        'Plan Change Confirmation',
+        `This will automatically cancel your current ${currentPlanName} subscription and switch you to ${newPlanName}.\n\n` +
+        `✓ Your current subscription will be cancelled immediately\n` +
+        `✓ You'll only be charged for the new plan\n` +
+        `✓ No double billing will occur\n\n` +
+        `${billingChange ? 'Your payment will be prorated based on usage.' : ''}`,
+        () => {
+          continueWithPlan();
+        },
+        'info',
+        'Continue with Plan Change',
+        'Cancel'
+      );
+      return;
+    }
+    
     // Show confirmation for downgrades
     if (isDowngrade) {
       showConfirm(
@@ -166,47 +184,11 @@ export default function Pricing_04({ user, isUpdatingPlan, setIsUpdatingPlan }: 
       <div className="flex flex-col items-center justify-center max-w-2xl mx-auto">
         <div className="flex flex-col items-center text-center max-w-2xl mx-auto">
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mt-6" style={{color: 'var(--text-primary)'}}>
-            Pricing
+            Creator Plans
           </h2>
           <p className="text-base text-center mt-6" style={{color: 'var(--text-secondary)'}}>
-            Streamline your creative process with AI. Generate, manage, and publish content — all in one place.
+            Choose between monthly or yearly billing. Both plans include all premium features.
           </p>
-        </div>
-
-        {/* Billing toggle */}
-        <div className="flex items-center justify-center mt-6">
-          <div
-            className="inline-flex items-center rounded-full p-1 border"
-            style={{ 
-              background: 'var(--bg-tertiary)', 
-              borderColor: 'var(--border-primary)'
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setBillPlan('monthly')}
-              className={cn(
-                "px-4 py-1 text-sm font-medium rounded-full transition-colors",
-                billPlan === 'monthly'
-                  ? "bg-[var(--accent-primary)] text-white"
-                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              )}
-            >
-              Monthly
-            </button>
-            <button
-              type="button"
-              onClick={() => setBillPlan('annually')}
-              className={cn(
-                "px-4 py-1 text-sm font-medium rounded-full transition-colors",
-                billPlan === 'annually'
-                  ? "bg-[var(--accent-primary)] text-white"
-                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              )}
-            >
-              Annually
-            </button>
-          </div>
         </div>
       </div>
 
@@ -259,17 +241,9 @@ const PlanCard = ({
   isUpdatingPlan?: string | null;
   onPlanClick: (plan: PlanType, billingPeriod: string) => void;
 }) => {
-  const price = billPlan === "monthly" ? plan.priceMonthly : plan.priceAnnual;
-  const annualPrice = plan.priceAnnual * 12;
-  const monthlyPriceTotal = plan.priceMonthly * 12;
-  
   // Check if this is the current plan
-  const currentBilling = user?.subscription_billing_period || 'monthly';
-  const normalizedBilling = billPlan === 'annually' ? 'annual' : billPlan;
-  const normalizedCurrentBilling = currentBilling === 'annually' ? 'annual' : currentBilling;
-  const isCurrentPlan = user?.plan === plan.id && normalizedCurrentBilling === normalizedBilling;
-  const planKey = `${plan.id}-${billPlan}`;
-  const isUpdatingThisPlan = isUpdatingPlan === planKey;
+  const isCurrentPlan = user?.plan === plan.id;
+  const isUpdatingThisPlan = isUpdatingPlan === plan.id;
 
   // Get only included features
   const includedFeatures = plan.features
@@ -344,22 +318,22 @@ const PlanCard = ({
         </h2>
         <h3 className="mt-3 text-2xl font-bold md:text-5xl" style={{color: 'var(--accent-primary)'}}>
           <NumberFlow
-            value={billPlan === "monthly" ? plan.priceMonthly : plan.priceAnnual}
-            suffix={billPlan === "monthly" ? "/mo" : "/mo"}
+            value={plan.priceMonthly}
+            suffix={plan.id === 'creator-yearly' ? "/mo" : "/mo"}
             format={{
               currency: "USD",
               style: "currency",
               currencySign: "standard",
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 0,
+              minimumFractionDigits: plan.id === 'creator-yearly' ? 2 : 0,
+              maximumFractionDigits: plan.id === 'creator-yearly' ? 2 : 0,
               currencyDisplay: "narrowSymbol"
             }}
           />
         </h3>
         <p className="text-sm md:text-base mt-2" style={{color: 'var(--text-secondary)'}}>
-          {billPlan === "monthly" 
-            ? `Generate up to ${plan.thumbnailsMonthly} thumbnails per month. ${plan.creditsMonthly} credits.`
-            : `Generate up to ${plan.thumbnailsAnnual} thumbnails per year. ${plan.creditsAnnual} credits.`}
+          {plan.id === 'creator-monthly' 
+            ? `Generate up to ${plan.creditsMonthly} thumbnails per month. Billed monthly.`
+            : `Generate up to ${plan.creditsMonthly} thumbnails per year. Billed annually ($250/year).`}
         </p>
       </div>
       
@@ -370,7 +344,7 @@ const PlanCard = ({
             "w-full hover:border-[var(--accent-primary)]",
             isCurrentPlan && "cursor-default"
           )}
-          onClick={() => onPlanClick(plan, billPlan)}
+          onClick={() => onPlanClick(plan, plan.id === 'creator-yearly' ? 'annually' : 'monthly')}
           disabled={isCurrentPlan || isUpdatingThisPlan}
           style={{
             background: isCurrentPlan
@@ -393,28 +367,23 @@ const PlanCard = ({
             'Current Plan'
           ) : user?.plan === 'free' ? (
             'Choose Plan'
+          ) : user?.subscription_status === 'active' ? (
+            'Switch to This Plan'
           ) : (
-            'Update Plan'
+            'Select Plan'
           )}
         </Button>
         <div className="h-8 overflow-hidden w-full mx-auto">
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={billPlan}
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -20, opacity: 0 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="text-sm text-center mt-3 mx-auto block"
-              style={{color: 'var(--text-muted)'}}
-            >
-              {billPlan === "monthly" ? (
-                "Billed monthly"
-              ) : (
-                `Billed $${annualPrice} annually (Save $${monthlyPriceTotal - annualPrice})`
-              )}
-            </motion.span>
-          </AnimatePresence>
+          <span
+            className="text-sm text-center mt-3 mx-auto block"
+            style={{color: 'var(--text-muted)'}}
+          >
+            {plan.id === 'creator-monthly' ? (
+              "Billed monthly"
+            ) : (
+              "Billed annually - Save $50/year"
+            )}
+          </span>
         </div>
       </div>
       

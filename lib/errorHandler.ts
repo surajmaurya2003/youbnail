@@ -13,6 +13,50 @@ export class SecureErrorHandler {
   private static isDevelopment = import.meta.env.DEV;
 
   /**
+   * Initialize global error handling to suppress sensitive console logs
+   */
+  static initializeGlobalErrorHandling(): void {
+    if (!this.isDevelopment) {
+      // Override console.error in production to filter sensitive information
+      const originalConsoleError = console.error;
+      console.error = (...args: any[]) => {
+        const message = args.join(' ');
+        
+        // Filter out sensitive error messages
+        const sensitivePatterns = [
+          /supabase\.co/gi,
+          /Internal Server Error/gi,
+          /500|502|503|504/gi,
+          /auth\/v1\//gi,
+          /localhost:\d+/gi,
+          /frame_ant\.js/gi
+        ];
+
+        const hasSensitiveInfo = sensitivePatterns.some(pattern => 
+          pattern.test(message)
+        );
+
+        if (!hasSensitiveInfo) {
+          originalConsoleError.apply(console, args);
+        }
+      };
+
+      // Handle unhandled promise rejections
+      window.addEventListener('unhandledrejection', (event) => {
+        const reason = event.reason;
+        if (reason?.message) {
+          const sanitized = this.getUserMessage(reason, 'An error occurred');
+          // Only log non-sensitive errors
+          if (!sanitized.includes('occurred')) {
+            originalConsoleError('Unhandled error:', sanitized);
+          }
+        }
+        event.preventDefault();
+      });
+    }
+  }
+
+  /**
    * Log error securely - detailed in dev, generic in production
    */
   static logError(message: string, error?: any, context?: ErrorContext): void {
@@ -53,7 +97,11 @@ export class SecureErrorHandler {
         /token/gi,
         /secret/gi,
         /password/gi,
-        /auth[_-]?header/gi
+        /auth[_-]?header/gi,
+        /internal\s+server\s+error/gi,
+        /500|502|503|504/gi,
+        /\/auth\/v1\//gi,
+        /otp\?redirect_to/gi
       ];
 
       const hasSensitiveInfo = sensitivePatterns.some(pattern => pattern.test(message));

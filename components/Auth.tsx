@@ -19,7 +19,20 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
       await authService.signInWithGoogle();
       // Note: OAuth redirects, so we don't need to navigate manually
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in with Google.');
+      // Provide user-friendly error messages for OAuth failures
+      let errorMessage = 'Failed to sign in with Google.';
+      
+      if (err.message?.includes('popup') || err.message?.includes('cancelled')) {
+        errorMessage = 'Sign in was cancelled. Please try again.';
+      } else if (err.message?.includes('blocked')) {
+        errorMessage = 'Pop-up blocked. Please allow pop-ups and try again.';
+      } else if (err.message?.includes('network') || err.message?.includes('fetch')) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      } else if (err.message?.includes('Database error') || err.message?.includes('database')) {
+        errorMessage = 'Account setup error. Please try again or contact support.';
+      }
+      
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -40,7 +53,20 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
       setMessage('Check your email for a magic link to sign in!');
       setEmail('');
     } catch (err: any) {
-      setError(err.message || 'Failed to send magic link.');
+      // Provide user-friendly error messages based on common scenarios
+      let errorMessage = 'Failed to send magic link.';
+      
+      if (err.message?.includes('email') && err.message?.includes('invalid')) {
+        errorMessage = 'Please enter a valid email address.';
+      } else if (err.message?.includes('rate') || err.message?.includes('limit')) {
+        errorMessage = 'Too many requests. Please wait a moment before trying again.';
+      } else if (err.message?.includes('network') || err.message?.includes('fetch')) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      } else if (err.message?.includes('Database error') || err.message?.includes('database')) {
+        errorMessage = 'There was an issue with your account setup. Please try again or contact support.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

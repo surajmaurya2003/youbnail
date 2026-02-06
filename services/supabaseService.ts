@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { UserProfile, GeneratedThumbnail, UsageRecord, PlanTier } from '../types';
+import { SecureErrorHandler } from '../lib/errorHandler';
 
 // Database table types
 export interface DatabaseUser {
@@ -37,17 +38,33 @@ export interface DatabaseUsageRecord {
 // Auth Service
 export const authService = {
   async signInWithGoogle() {
-    // Use environment variable if available, otherwise use current origin
-    const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${appUrl}/`,
-      },
-    });
+    try {
+      // Use environment variable if available, otherwise use current origin
+      const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${appUrl}/`,
+        },
+      });
 
-    if (error) throw error;
-    return data;
+      if (error) {
+        SecureErrorHandler.logError('Google OAuth failed', {
+          code: error.status || 'unknown',
+          type: error.name || 'oauth_error'
+        });
+        throw error;
+      }
+      return data;
+    } catch (error: any) {
+      SecureErrorHandler.logError('OAuth service error', {
+        type: 'google_oauth_error',
+        hasMessage: !!error?.message
+      });
+      
+      const sanitizedError = new Error(SecureErrorHandler.getUserMessage(error, 'Failed to sign in with Google'));
+      throw sanitizedError;
+    }
   },
 
   async signOut() {
@@ -56,19 +73,38 @@ export const authService = {
   },
 
   async signInWithMagicLink(email: string, options?: { data?: Record<string, any> }) {
-    // Use environment variable if available, otherwise use current origin
-    const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-    const { data, error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: true,
-        emailRedirectTo: `${appUrl}/`,
-        data: options?.data, // Pass user metadata (like name)
-      },
-    });
+    try {
+      // Use environment variable if available, otherwise use current origin
+      const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+      const { data, error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: true,
+          emailRedirectTo: `${appUrl}/`,
+          data: options?.data, // Pass user metadata (like name)
+        },
+      });
 
-    if (error) throw error;
-    return data;
+      if (error) {
+        // Log securely without exposing sensitive info
+        SecureErrorHandler.logError('Magic link send failed', {
+          code: error.status || 'unknown',
+          type: error.name || 'auth_error'
+        });
+        throw error;
+      }
+      return data;
+    } catch (error: any) {
+      // Prevent console logging of sensitive Supabase errors
+      SecureErrorHandler.logError('Auth service error', {
+        type: 'magic_link_error',
+        hasMessage: !!error?.message
+      });
+      
+      // Re-throw with sanitized message
+      const sanitizedError = new Error(SecureErrorHandler.getUserMessage(error, 'Failed to send magic link'));
+      throw sanitizedError;
+    }
   },
 
   async getCurrentUser() {
@@ -154,7 +190,8 @@ export const userService = {
       if (error.code === 'PGRST116') {
         return null;
       }
-      console.error('Profile fetch failed');
+      // Log minimal error info without exposing user data
+      console.error('Profile fetch failed:', error.code || 'unknown_error');
       return null;
     }
 
@@ -240,24 +277,43 @@ export const userService = {
 // Storage Service
 export const storageService = {
   async uploadThumbnail(userId: string, file: File, filename?: string): Promise<{ url: string; path: string }> {
-    const fileExt = file.name.split('.').pop() || filename?.split('.').pop() || 'png';
-    const filePath = `${userId}/${Date.now()}.${fileExt}`;
+    try {
+      const fileExt = file.name.split('.').pop() || filename?.split('.').pop() || 'png';
+      const filePath = `${userId}/${Date.now()}.${fileExt}`;
 
-    const { data, error } = await supabase.storage
-      .from('thumbnails')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
+      // Validate file size (max 10MB for production)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        throw new Error('File size exceeds 10MB limit');
+      }
 
-    if (error) throw error;
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Invalid file type. Only images are allowed.');
+      }
 
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from('thumbnails')
-      .getPublicUrl(filePath);
+      const { data, error } = await supabase.storage
+        .from('thumbnails')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
 
-    return { url: urlData.publicUrl, path: filePath };
+      if (error) {
+        console.error('Storage upload error:', error.message);
+        throw new Error(`Upload failed: ${error.message}`);
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('thumbnails')
+        .getPublicUrl(filePath);
+
+      return { url: urlData.publicUrl, path: filePath };
+    } catch (error) {
+      console.error('Upload service error:', error);
+      throw error;
+    }
   },
 
   async deleteThumbnail(storagePath: string) {
@@ -336,7 +392,6 @@ export const thumbnailsService = {
     if (authError || !user) {
       throw new Error('User not authenticated');
     }
-    console.log('Authenticated user:', user.id);
     
     // Delete from storage only if storage path exists
     if (storagePath) {

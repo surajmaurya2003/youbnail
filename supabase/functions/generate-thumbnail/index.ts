@@ -17,9 +17,9 @@ const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 
 // Rate limits per user plan
 const RATE_LIMITS = {
-  free: { requestsPerMinute: 5, requestsPerHour: 50 },
   starter: { requestsPerMinute: 10, requestsPerHour: 200 },
-  pro: { requestsPerMinute: 20, requestsPerHour: 500 },
+  'creator-monthly': { requestsPerMinute: 20, requestsPerHour: 500 },
+  'creator-yearly': { requestsPerMinute: 25, requestsPerHour: 600 },
 };
 
 // Input validation constants
@@ -31,7 +31,7 @@ const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
  */
 function checkRateLimit(userId: string, userPlan: string): { allowed: boolean; retryAfter?: number } {
   const now = Date.now();
-  const limits = RATE_LIMITS[userPlan as keyof typeof RATE_LIMITS] || RATE_LIMITS.free;
+  const limits = RATE_LIMITS[userPlan as keyof typeof RATE_LIMITS] || RATE_LIMITS.starter;
   
   const key = userId;
   const userLimit = rateLimitStore.get(key);
@@ -360,7 +360,6 @@ Deno.serve(async (req) => {
     }
     
     const jwt = authHeader.split(' ')[1];
-    console.log('JWT token length:', jwt.length);
 
     // Create Supabase client for JWT verification
     const supabaseAuth = createClient(supabaseUrl, supabaseServiceKey);
@@ -370,8 +369,8 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(jwt);
     
     console.log('JWT verification result:', { 
-      user: user ? { id: user.id, email: user.email } : null, 
-      error: authError ? authError.message : null 
+      user: user ? { hasUser: true } : null, 
+      error: authError ? 'verification_failed' : null 
     });
     
     if (authError || !user) {

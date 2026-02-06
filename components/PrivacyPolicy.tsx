@@ -14,6 +14,12 @@ export const PrivacyPolicy: React.FC = () => {
 
         <div className="space-y-8 text-base leading-relaxed" style={{color: 'var(--text-secondary)'}}>
           <section>
+            <p className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-800">
+              <strong>Note:</strong> Youbnail operates exclusively on a paid subscription model. We do not offer free accounts or collect data from non-paying users.
+            </p>
+          </section>
+
+          <section>
             <h2 className="text-2xl font-bold mb-4" style={{color: 'var(--text-primary)'}}>1. Information We Collect</h2>
             <p>We collect information you provide directly to us when you create an account, use our services, or communicate with us. This includes:</p>
             <ul className="list-disc pl-6 mt-2 space-y-2">

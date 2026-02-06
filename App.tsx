@@ -38,10 +38,12 @@ import { RefundPolicy } from './components/RefundPolicy';
 import { authService, userService, thumbnailsService, usageService, storageService } from './services/supabaseService';
 import { supabase } from './lib/supabase';
 import Pricing_04 from './components/ui/ruixen-pricing-04';
+import { CreatorPricing } from './components/ui/creator-pricing';
 import { ToastProvider, useToast } from './components/ui/toast';
 import { AlertModal, ConfirmModal, Modal } from './components/ui/modal';
 import { useModal } from './components/ui/use-modal';
 import { NotificationsPanel } from './components/NotificationsPanel';
+import { SecureErrorHandler } from './lib/errorHandler';
 
 
 const AppWithToast: React.FC = () => {
@@ -230,6 +232,11 @@ const AppWithToast: React.FC = () => {
     );
   };
 
+  // Initialize secure error handling
+  useEffect(() => {
+    SecureErrorHandler.initializeGlobalErrorHandling();
+  }, []);
+
   // Initialize auth and load user data
   useEffect(() => {
     const initializeAuth = async () => {
@@ -244,7 +251,7 @@ const AppWithToast: React.FC = () => {
                         currentUser.user_metadata?.full_name || 
                         currentUser.email?.split('@')[0] || 
                         'User';
-            console.log('Creating user profile with name:', name);
+            
             await userService.updateUserProfile(currentUser.id, {
               id: currentUser.id,
               email: currentUser.email!,
@@ -309,17 +316,23 @@ const AppWithToast: React.FC = () => {
         let userProfile = await userService.getUserProfile(user.id);
         if (!userProfile) {
           // Create profile for OAuth users
-          const name = user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
-          console.log('Creating OAuth user profile with name:', name);
-          console.log('User metadata:', user.user_metadata);
-          await userService.updateUserProfile(user.id, {
-            id: user.id,
-            email: user.email!,
-            name: name,
-            credits: 10,
-            plan: 'starter',
-          });
-          userProfile = await userService.getUserProfile(user.id);
+          try {
+            const name = user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+            
+            await userService.updateUserProfile(user.id, {
+              id: user.id,
+              email: user.email!,
+              name: name,
+              credits: 10,
+              plan: 'starter',
+            });
+            userProfile = await userService.getUserProfile(user.id);
+          } catch (profileError: any) {
+            console.error('Profile creation failed:', profileError?.code || 'Unknown error');
+            // Show user-friendly message instead of technical database error
+            showError('Account Setup', 'There was an issue setting up your account. Please refresh the page or contact support if the problem persists.');
+            return;
+          }
         }
         
         if (userProfile) {
@@ -509,7 +522,8 @@ const AppWithToast: React.FC = () => {
       return;
     }
 
-    if (isPartialUpdate && user.plan === 'starter') {
+    // For Creator plans, all users have access to all features
+    if (isPartialUpdate) {
       showWarning('Pro Feature', 'Selective Editing is a Pro feature. Please upgrade your plan.');
       navigateToTab('plans');
       return;
@@ -680,10 +694,11 @@ const AppWithToast: React.FC = () => {
             
             // Update the generated thumb URL if upload succeeds (seamless transition)
             setGeneratedThumb(publicUrl);
+            console.log('✅ Thumbnail uploaded to storage successfully');
           } catch (error) {
-            console.error('Background upload failed');
+            console.warn('Background upload failed, using local image:', error);
             // Continue with base64 URL - user can still download and use image
-            // Upload will retry in background or user can regenerate
+            // This is expected behavior - user experience is not degraded
           }
         }
       })();
@@ -929,7 +944,7 @@ const AppWithToast: React.FC = () => {
     if (!user) return;
     
     // Check if user is on starter or free plan
-    if (user.plan === 'starter' || user.plan === 'free') {
+    if (user.plan === 'free') {
       showAlert('Pro Feature Required', '👑 Edit feature is exclusively for Pro users!\n\nUpgrade to Pro to unlock powerful editing capabilities and transform your thumbnails like a king! 🎨✨', 'warning');
       // Optionally navigate to plans tab
       navigateToTab('plans');
@@ -2191,7 +2206,7 @@ const AppWithToast: React.FC = () => {
         )}
 
         {activeTab === 'plans' && (
-          <div className="max-w-7xl mx-auto px-6 py-[1px] space-y-12">
+          <div className="max-w-7xl mx-auto px-6 py-[1px] space-y-6">
             {/* Free User Notice */}
             {user?.plan === 'free' && (
               <div className="max-w-4xl mx-auto">
@@ -2217,7 +2232,7 @@ const AppWithToast: React.FC = () => {
             )}
 
             {/* New Pricing Component */}
-            <Pricing_04 
+            <CreatorPricing 
               user={user}
               isUpdatingPlan={isUpdatingPlan}
               setIsUpdatingPlan={setIsUpdatingPlan}
@@ -2636,7 +2651,7 @@ const AppWithToast: React.FC = () => {
                 </button>
               </div>
 
-              {(user.plan === 'starter' || user.plan === 'pro') && (
+              {(user.plan === 'creator-monthly' || user.plan === 'creator-yearly') && (
                 <div className="border-t pt-4 mt-4" style={{borderColor: 'var(--border-primary)'}}>
                   <div className="flex items-start gap-2 mb-2">
                     <svg className="w-5 h-5 flex-shrink-0 mt-0.5" style={{color: 'var(--text-secondary)'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">

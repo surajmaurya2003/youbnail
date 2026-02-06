@@ -33,7 +33,17 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    // Only log in development, use secure logging in production
+    if (import.meta.env.DEV) {
+      console.error('ErrorBoundary caught an error:', error, errorInfo);
+    } else {
+      // In production, log minimal info without sensitive details
+      console.error('Application error occurred:', {
+        message: error.message,
+        hasStack: !!error.stack,
+        component: 'ErrorBoundary'
+      });
+    }
     
     // In production, send to error tracking service (Sentry, LogRocket, etc.)
     if (import.meta.env.PROD) {

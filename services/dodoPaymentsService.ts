@@ -6,7 +6,7 @@
 export interface CreateCheckoutParams {
   userId: string;
   userEmail: string;
-  planId: 'starter' | 'pro';
+  planId: 'creator-monthly' | 'creator-yearly';
   billingPeriod: 'monthly' | 'annual';
 }
 
@@ -27,10 +27,8 @@ export async function createCheckoutSession(
 
   // Map plan and billing period to product ID
   const productIdMap: Record<string, string> = {
-    'starter-monthly': Deno.env.get('DODO_PRODUCT_STARTER_MONTHLY') || '',
-    'starter-annual': Deno.env.get('DODO_PRODUCT_STARTER_ANNUAL') || '',
-    'pro-monthly': Deno.env.get('DODO_PRODUCT_PRO_MONTHLY') || '',
-    'pro-annual': Deno.env.get('DODO_PRODUCT_PRO_ANNUAL') || '',
+    'creator-monthly': 'pdt_0NXpM255yChszOw8NtD8E',
+    'creator-yearly': 'pdt_0NXpMC6CaDirXTzbauyd1',
   };
 
   const productKey = `${params.planId}-${params.billingPeriod}`;

@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
   console.error('🔥 WEBHOOK CALLED - TIMESTAMP:', new Date().toISOString());
   console.error('🔥 METHOD:', req.method);
   console.error('🔥 URL:', req.url);
-  console.error('🔥 HEADERS:', JSON.stringify(Object.fromEntries(req.headers)));
+  console.error('🔥 HEADERS COUNT:', req.headers ? Array.from(req.headers.keys()).length : 0);
   
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -113,13 +113,21 @@ Deno.serve(async (req) => {
                      req.headers.get('x-webhook-signature') || 
                      req.headers.get('webhook-signature') || '';
     
-    // Debug: Log all headers to see what DodoPayments sends
+    // Debug: Log headers summary (excluding sensitive data)
     console.log('=== WEBHOOK DEBUG INFO ===');
     console.log('Headers received:');
     const headers: Record<string, string> = {};
     req.headers.forEach((value, key) => {
-      headers[key] = value;
-      console.log(`  ${key}: ${value}`);
+      // Sanitize sensitive headers
+      if (key.toLowerCase().includes('authorization') || 
+          key.toLowerCase().includes('signature') ||
+          key.toLowerCase().includes('token')) {
+        headers[key] = '[REDACTED]';
+        console.log(`  ${key}: [REDACTED]`);
+      } else {
+        headers[key] = value;
+        console.log(`  ${key}: ${value}`);
+      }
     });
     console.log('Signature found:', signature ? 'Yes' : 'No');
     
@@ -193,6 +201,42 @@ Deno.serve(async (req) => {
     }
     
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // IDEMPOTENCY: Create event hash to prevent duplicate processing
+    const eventHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body))
+      .then(hash => Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join(''));
+    
+    // Check if this exact webhook event has already been processed
+    const { data: existingEvent } = await supabaseClient
+      .from('webhook_events')
+      .select('id, processed_at')
+      .eq('event_hash', eventHash)
+      .maybeSingle();
+    
+    if (existingEvent) {
+      console.log('🔄 Webhook event already processed at', existingEvent.processed_at, '- returning success to prevent retries');
+      return new Response(JSON.stringify({ 
+        received: true, 
+        already_processed: true,
+        processed_at: existingEvent.processed_at
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Record this webhook event to prevent future duplicates
+    const { error: eventInsertError } = await supabaseClient
+      .from('webhook_events')
+      .insert({
+        event_hash: eventHash,
+        event_type: eventType,
+        subscription_id: eventData?.subscription_id || eventData?.id,
+        user_id: eventData?.metadata?.user_id || eventData?.customer?.metadata?.user_id
+      });
+    
+    if (eventInsertError && eventInsertError.code !== '23505') {
+      console.warn('Could not record webhook event (non-critical):', eventInsertError);
+    }
 
     // Handle different event types
     // DodoPayments uses: payment.succeeded, payment.failed, subscription.active, subscription.renewed, etc.
@@ -200,14 +244,12 @@ Deno.serve(async (req) => {
       case 'payment.succeeded': {
         // Payment succeeded - Record the payment but let subscription.active handle subscription setup
         console.log('=== PAYMENT SUCCEEDED EVENT ===');
-        console.log('Full event data:', JSON.stringify(eventData, null, 2));
+        console.log('Event received with expected data structure');
         console.log('Payment amount details:', {
           amount: eventData.amount,
-          amount_paid: eventData.amount_paid,
           currency: eventData.currency,
-          tax_amount: eventData.tax_amount,
-          total_amount: eventData.total_amount,
-          subtotal: eventData.subtotal
+          hasSubscriptionId: !!eventData.subscription_id,
+          hasUserId: !!(eventData.metadata?.user_id || eventData.customer?.metadata?.user_id)
         });
         
         const userId = eventData.metadata?.user_id || eventData.customer?.metadata?.user_id;
@@ -262,15 +304,42 @@ Deno.serve(async (req) => {
         console.log('Event type:', eventType);
         console.log('Full event data:', JSON.stringify(eventData, null, 2));
         
+        /**
+         * AUTOMATIC SUBSCRIPTION CANCELLATION LOGIC:
+         * When a subscription becomes active (new, renewed, or plan changed), 
+         * we automatically cancel any other active subscriptions for the same user.
+         * 
+         * This prevents double billing scenarios like:
+         * - Monthly → Yearly upgrades
+         * - Yearly → Monthly downgrades  
+         * - Plan changes between different tiers
+         * 
+         * The cancellation happens in the subscription history update below.
+         */
+        
         // Get user ID from metadata
         const userId = eventData.metadata?.user_id || eventData.customer?.metadata?.user_id;
-        const planId = eventData.metadata?.plan_id || 'starter';
+        let planId = eventData.metadata?.plan_id || 'starter';
         let billingPeriod = eventData.metadata?.billing_period || 'monthly';
+        
+        // Product ID to plan mapping for security validation
+        const productIdToPlan: Record<string, string> = {
+          [Deno.env.get('DODO_PRODUCT_CREATOR_MONTHLY') || '']: 'creator-monthly',
+          [Deno.env.get('DODO_PRODUCT_CREATOR_YEARLY') || '']: 'creator-yearly',
+        };
+        
+        const productId = eventData.product_id || event.data?.product_id;
+        
+        // Validate plan using product ID if available
+        if (productId && productIdToPlan[productId]) {
+          planId = productIdToPlan[productId];
+          console.log(`Plan validated from product ID ${productId}: ${planId}`);
+        }
+        
         // Normalize billing period (annually → annual)
         billingPeriod = billingPeriod === 'annually' ? 'annual' : billingPeriod;
         
         const subscriptionId = eventData.subscription_id || eventData.id;
-        const productId = eventData.product_id || event.data?.product_id;
 
         if (!userId) {
           console.error('No user_id in webhook event');
@@ -296,13 +365,11 @@ Deno.serve(async (req) => {
 
         // Calculate credits based on plan
         const creditsMap: Record<string, number> = {
-          'starter-monthly': 30,
-          'starter-annual': 360,
-          'pro-monthly': 100,
-          'pro-annual': 1200,
+          'creator-monthly-monthly': 50,
+          'creator-yearly-annual': 600,
         };
         const planKey = `${planId}-${billingPeriod}`;
-        const credits = creditsMap[planKey] || 30;
+        const credits = creditsMap[planKey] || 50;
 
         console.log('Plan key:', planKey, '→ Credits:', credits);
 
@@ -330,7 +397,14 @@ Deno.serve(async (req) => {
           updated_at: now.toISOString(),
         };
         
-        console.log('Update data:', updateData);
+        console.log('Update data structure:', {
+          planId: updateData.plan,
+          credits: updateData.credits,
+          billingPeriod: updateData.subscription_billing_period,
+          status: updateData.subscription_status,
+          hasSubscriptionId: !!updateData.subscription_id,
+          hasCustomerId: !!updateData.payment_customer_id
+        });
         
         const { error: updateError, data: updateResult } = await supabaseClient
           .from('users')
@@ -338,9 +412,12 @@ Deno.serve(async (req) => {
           .eq('id', userId);
 
         if (updateError) {
-          console.error('❌ Error updating user:', updateError);
-          console.error('User ID:', userId);
-          console.error('Update data:', updateData);
+          console.error('❌ Error updating user:', {
+            errorCode: updateError.code,
+            errorHint: updateError.hint,
+            hasUserId: !!userId
+          });
+          console.error('Update operation failed for user subscription');
           return new Response(JSON.stringify({ error: 'Database error', details: updateError }), { 
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -349,58 +426,59 @@ Deno.serve(async (req) => {
         
         console.log('✅ User updated successfully');
 
-        // Record in subscription history - check for duplicates first
+        // Record in subscription history - use UPSERT to prevent duplicates
         if (subscriptionId && productId) {
           console.log('Recording subscription history...');
           
-          // Check if this subscription already has a recent history record to prevent duplicates
-          const fiveSecondsAgo = new Date(Date.now() - 5000).toISOString();
-          const { data: existingHistory, error: checkError } = await supabaseClient
+          // Use INSERT ... ON CONFLICT for atomic duplicate prevention
+          const historyInsert = {
+            user_id: userId,
+            subscription_id: subscriptionId,
+            product_id: productId,
+            billing_period: billingPeriod,
+            status: 'active',
+            amount_paid: eventData.amount || eventData.amount_paid || 0,
+            currency: eventData.currency || 'USD',
+            started_at: now.toISOString(),
+            ends_at: endsAt.toISOString(),
+          };
+          
+          console.log('History insert data:', historyInsert);
+          
+          // Record new subscription in subscription_history
+          const { error: historyError } = await supabaseClient
             .from('subscription_history')
-            .select('id, created_at')
-            .eq('user_id', userId)
-            .eq('subscription_id', subscriptionId)
-            .eq('product_id', productId)
-            .eq('billing_period', billingPeriod)
-            .eq('status', 'active')
-            .gte('created_at', fiveSecondsAgo)
-            .maybeSingle();
+            .insert(historyInsert);
           
-          if (checkError && checkError.code !== 'PGRST116') {
-            console.error('Error checking existing subscription history:', checkError);
-          }
-          
-          if (existingHistory) {
-            console.log('⚠️ Subscription history already exists (created', existingHistory.created_at, '), skipping duplicate insert');
-          } else {
-            const historyInsert = {
-              user_id: userId,
-              subscription_id: subscriptionId,
-              product_id: productId,
-              billing_period: billingPeriod,
-              status: 'active',
-              amount_paid: eventData.amount || eventData.amount_paid || 0,
-              currency: eventData.currency || 'USD',
-              started_at: now.toISOString(),
-              ends_at: endsAt.toISOString(),
-            };
-            
-            console.log('History insert data:', historyInsert);
-            
-            const { error: historyError } = await supabaseClient
-              .from('subscription_history')
-              .insert(historyInsert);
-            
-            if (historyError) {
-              if (historyError.code === '23505') {
-                console.log('⚠️ Duplicate subscription detected (unique constraint), skipping insert');
-              } else {
-                console.error('❌ Error inserting subscription history:', historyError);
+          if (historyError) {
+            if (historyError.code === '23505') {
+              console.log('⚠️ Subscription already exists (unique constraint), checking ownership...');
+              
+              // Check if this subscription belongs to a different user (critical error)
+              const { data: existingSub } = await supabaseClient
+                .from('subscription_history')
+                .select('user_id, status')
+                .eq('subscription_id', subscriptionId)
+                .single();
+              
+              if (existingSub && existingSub.user_id !== userId) {
+                console.error('🚨 CRITICAL: Subscription', subscriptionId, 'belongs to user', existingSub.user_id, 'but webhook is for user', userId);
+                return new Response(JSON.stringify({ 
+                  error: 'Subscription ownership conflict',
+                  details: 'Same subscription assigned to multiple users'
+                }), { 
+                  status: 400,
+                  headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                });
               }
-              // Don't fail the webhook for history insert errors
+              
+              console.log('✅ Subscription already processed for correct user, continuing...');
             } else {
-              console.log('✅ Subscription history recorded successfully');
+              console.error('❌ Error inserting subscription history:', historyError);
             }
+            // Don't fail the webhook for history insert errors
+          } else {
+            console.log('✅ Subscription history recorded successfully');
           }
         } else {
           console.warn('⚠️ Skipping subscription history: missing', !subscriptionId ? 'subscription_id' : 'product_id');
@@ -567,8 +645,22 @@ Deno.serve(async (req) => {
         console.log('=== SUBSCRIPTION UPDATED EVENT ===');
         const userId = eventData.metadata?.user_id || eventData.customer?.metadata?.user_id;
         const subscriptionId = eventData.subscription_id || eventData.id;
-        const planId = eventData.metadata?.plan_id;
+        let planId = eventData.metadata?.plan_id;
         let billingPeriod = eventData.metadata?.billing_period;
+
+        // Product ID to plan mapping for security validation
+        const productIdToPlan: Record<string, string> = {
+          [Deno.env.get('DODO_PRODUCT_CREATOR_MONTHLY') || '']: 'creator-monthly',
+          [Deno.env.get('DODO_PRODUCT_CREATOR_YEARLY') || '']: 'creator-yearly',
+        };
+        
+        const productId = eventData.product_id || event.data?.product_id;
+        
+        // Validate plan using product ID if available
+        if (productId && productIdToPlan[productId]) {
+          planId = productIdToPlan[productId];
+          console.log(`Plan validated from product ID ${productId}: ${planId}`);
+        }
 
         if (!userId) {
           console.warn('No user_id in subscription.updated event');
@@ -585,13 +677,11 @@ Deno.serve(async (req) => {
         if (planId && billingPeriod) {
           // Calculate credits based on plan
           const creditsMap: Record<string, number> = {
-            'starter-monthly': 30,
-            'starter-annual': 360,
-            'pro-monthly': 100,
-            'pro-annual': 1200,
+            'creator-monthly-monthly': 50,
+            'creator-yearly-annual': 600,
           };
           const planKey = `${planId}-${billingPeriod}`;
-          const credits = creditsMap[planKey] || 30;
+          const credits = creditsMap[planKey] || 50;
 
           console.log('Updating subscription for user:', userId, 'to plan:', planKey, 'credits:', credits);
 

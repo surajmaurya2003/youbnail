@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
     
     // Verify the user ID matches the JWT
     if (authUser.id !== userId) {
-      console.error('User ID mismatch: JWT user', authUser.id, 'vs request userId', userId);
+      console.error('User ID mismatch: authenticated user vs request user');
       return new Response(
         JSON.stringify({ error: 'Unauthorized: User ID mismatch' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -130,12 +130,11 @@ Deno.serve(async (req) => {
 
     console.log("=== DODO PAYMENTS CANCELLATION ATTEMPT ===");
     console.log("Attempting to cancel subscription:", {
-      subscriptionId: user.subscription_id,
-      customerId: user.payment_customer_id,
+      hasSubscriptionId: !!user.subscription_id,
+      hasCustomerId: !!user.payment_customer_id,
       dodoApiMode: dodoApiMode,
       dodoApiModeEnvSet: !!Deno.env.get("DODO_API_MODE"),
       dodoBaseUrl: dodoBaseUrl,
-      fullUrl: `${dodoBaseUrl}/subscriptions/${user.subscription_id}`,
       method: "PATCH",
       apiKeyPresent: !!dodoApiKey,
       apiKeyLength: dodoApiKey?.length || 0

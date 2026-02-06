@@ -30,7 +30,9 @@ export const SECURITY_CONFIG = {
 
 // NeetoChat configuration
 export const NEETO_CHAT_CONFIG = {
-  apiKey: "e7aTFwQ8pcN1otcv", // Note: Consider moving to server-side proxy
+  // ⚠️ SECURITY: API key moved to environment variables
+  // Use VITE_NEETO_CHAT_API_KEY environment variable instead
+  apiKey: import.meta.env.VITE_NEETO_CHAT_API_KEY || '',
   enableOnDomains: isProduction ? [PRODUCTION_DOMAIN] : ['localhost', '127.0.0.1'],
   settings: {
     enableHttpsOnly: isProduction,

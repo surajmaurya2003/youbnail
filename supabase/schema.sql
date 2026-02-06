@@ -6,9 +6,16 @@ CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
-  credits INTEGER NOT NULL DEFAULT 10,
-  plan TEXT NOT NULL DEFAULT 'starter' CHECK (plan IN ('starter', 'pro')),
+  credits INTEGER NOT NULL DEFAULT 0,
+  plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'starter', 'creator-monthly', 'creator-yearly')),
   avatar_url TEXT,
+  subscription_id TEXT,
+  subscription_status TEXT,
+  subscription_product_id TEXT,
+  subscription_billing_period TEXT,
+  subscription_started_at TIMESTAMPTZ,
+  subscription_ends_at TIMESTAMPTZ,
+  payment_customer_id TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

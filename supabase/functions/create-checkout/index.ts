@@ -19,29 +19,44 @@ Deno.serve(async (req) => {
       headers: corsHeaders 
     });
   }
-
+  
   try {
+    console.log('=== CREATE-CHECKOUT FUNCTION STARTED ===');
+    console.log('Request URL:', req.url);
+    console.log('Request method:', req.method);
+    console.log('Request headers:', Object.fromEntries(req.headers.entries()));
+    
     // Get JWT token from Authorization header
     const authHeader = req.headers.get('Authorization');
-    console.log('Authorization header:', authHeader ? 'present' : 'missing');
+    console.log('Authorization header present:', !!authHeader);
     
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader?.startsWith('Bearer ')) {
       console.error('Missing or invalid Authorization header');
       return new Response(
-        JSON.stringify({ error: 'Unauthorized: Missing authentication token' }),
+        JSON.stringify({ 
+          error: 'Missing Authorization header',
+          code: 'AUTH_MISSING' 
+        }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    const jwt = authHeader.split(' ')[1];
-    console.log('JWT token length:', jwt.length);
-    
+    const jwt = authHeader.replace('Bearer ', '');
+    console.log('JWT token extracted, length:', jwt.length);
+
     // Get environment variables
     const dodoApiKey = Deno.env.get('DODO_API_KEY') || '';
     const appUrl = Deno.env.get('APP_URL') || 'http://localhost:3000';
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    // Use SUPABASE_SERVICE_ROLE_KEY which is the standard Supabase secret
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    
+    // These are automatically provided by Supabase Edge Runtime
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://wawfgjzpwykvjgmuaueb.supabase.co';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_ANON_KEY') || '';
+    
+    console.log('Environment check:', {
+      dodoApiKey: dodoApiKey ? 'SET' : 'MISSING',
+      supabaseUrl: supabaseUrl ? 'SET' : 'MISSING', 
+      supabaseServiceKey: supabaseServiceKey ? 'SET' : 'MISSING'
+    });
     
     // Validate environment variables
     if (!dodoApiKey) {
@@ -52,49 +67,63 @@ Deno.serve(async (req) => {
       );
     }
     
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing Supabase environment variables');
-      return new Response(
-        JSON.stringify({ error: 'Server configuration error: Missing Supabase credentials' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    console.log('Supabase config loaded:', { 
+      url: supabaseUrl.substring(0, 20) + '...', 
+      hasServiceKey: !!supabaseServiceKey 
+    });
     
     const productIdMap: Record<string, string> = {
-      'starter-monthly': Deno.env.get('DODO_PRODUCT_STARTER_MONTHLY') || '',
-      'starter-annual': Deno.env.get('DODO_PRODUCT_STARTER_ANNUAL') || '',
-      'pro-monthly': Deno.env.get('DODO_PRODUCT_PRO_MONTHLY') || '',
-      'pro-annual': Deno.env.get('DODO_PRODUCT_PRO_ANNUAL') || '',
+      'creator-monthly': Deno.env.get('DODO_PRODUCT_CREATOR_MONTHLY') || '',
+      'creator-yearly': Deno.env.get('DODO_PRODUCT_CREATOR_YEARLY') || '',
+      'creator-annual': Deno.env.get('DODO_PRODUCT_CREATOR_YEARLY') || '', // Map annual to yearly product
     };
     
     console.log('Raw environment variables check:');
-    console.log('DODO_PRODUCT_STARTER_MONTHLY:', Deno.env.get('DODO_PRODUCT_STARTER_MONTHLY') ? 'Set' : 'Not set');
-    console.log('DODO_PRODUCT_STARTER_ANNUAL:', Deno.env.get('DODO_PRODUCT_STARTER_ANNUAL') ? 'Set' : 'Not set');
-    console.log('DODO_PRODUCT_PRO_MONTHLY:', Deno.env.get('DODO_PRODUCT_PRO_MONTHLY') ? 'Set' : 'Not set');
-    console.log('DODO_PRODUCT_PRO_ANNUAL:', Deno.env.get('DODO_PRODUCT_PRO_ANNUAL') ? 'Set' : 'Not set');
+    console.log('Using environment variable Creator plan product IDs:', {
+      monthly: productIdMap['creator-monthly'],
+      yearly: productIdMap['creator-yearly']
+    });
     
     console.log('Product IDs loaded:', {
-      'starter-monthly': productIdMap['starter-monthly'] ? 'Set' : 'Missing',
-      'starter-annual': productIdMap['starter-annual'] ? 'Set' : 'Missing',
-      'pro-monthly': productIdMap['pro-monthly'] ? 'Set' : 'Missing',
-      'pro-annual': productIdMap['pro-annual'] ? 'Set' : 'Missing',
+      'creator-monthly': productIdMap['creator-monthly'] ? 'Set' : 'Missing',
+      'creator-yearly': productIdMap['creator-yearly'] ? 'Set' : 'Missing',
+      'creator-annual': productIdMap['creator-annual'] ? 'Set' : 'Missing',
     });
-
+    
+    // Validate product IDs are loaded
+    if (!productIdMap['creator-monthly'] || (!productIdMap['creator-yearly'] && !productIdMap['creator-annual'])) {
+      console.error('Missing product IDs from environment variables');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Server configuration error: Missing product IDs',
+          details: 'Product environment variables not properly set'
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
     // Parse request body
     let requestBody;
     try {
+      console.log('Parsing request body...');
       requestBody = await req.json();
-      console.log('Request body received:', requestBody);
+      console.log('Request body received:', JSON.stringify(requestBody, null, 2));
     } catch (parseError) {
       console.error('Failed to parse request body:', parseError);
       return new Response(
-        JSON.stringify({ error: 'Invalid request body' }),
+        JSON.stringify({ 
+          error: 'Invalid request body', 
+          code: 'PARSE_ERROR',
+          details: parseError.message 
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const { 
-      userId, 
       planId, 
       billingPeriod,
       currentPlan,
@@ -104,86 +133,80 @@ Deno.serve(async (req) => {
     } = requestBody;
 
     // Validate input
-    if (!userId || !planId || !billingPeriod) {
+    if (!planId || !billingPeriod) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
+        JSON.stringify({ error: 'Missing required fields: planId and billingPeriod' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Create Supabase client for JWT verification
-    const supabaseAuth = createClient(supabaseUrl, supabaseServiceKey);
+    // Create Supabase client for user verification
+    let supabaseAuth;
+    try {
+      console.log('Creating Supabase client...');
+      supabaseAuth = createClient(supabaseUrl, supabaseServiceKey);
+      console.log('Supabase client created successfully');
+    } catch (clientError) {
+      console.error('Failed to create Supabase client:', clientError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Server configuration error',
+          code: 'CLIENT_ERROR',
+          details: 'Failed to initialize authentication service'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
-    // Verify JWT token and get user
-    console.log('Verifying JWT token...');
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(jwt);
+    // Get user from JWT token
+    console.log('Getting user from JWT token...');
+    let user, authError;
     
-    console.log('JWT verification result:', { 
-      user: user ? { id: user.id, email: user.email } : null, 
-      error: authError ? authError.message : null 
-    });
+    try {
+      const result = await supabaseAuth.auth.getUser(jwt);
+      user = result.data.user;
+      authError = result.error;
+      
+      console.log('Auth result:', { 
+        hasUserId: !!user?.id,
+        hasEmail: !!user?.email,
+        hasError: !!authError
+      });
+      
+    } catch (exception) {
+      console.error('Exception during JWT validation:', exception);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Authentication failed',
+          code: 'JWT_EXCEPTION', 
+          message: 'Invalid token format',
+          details: exception.message
+        }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     if (authError || !user) {
-      console.error('JWT verification failed:', authError);
+      console.error('Failed to authenticate user:', authError?.message);
       return new Response(
         JSON.stringify({ 
-          error: `Unauthorized: Invalid authentication token`, 
-          details: authError?.message || 'No user found',
-          code: 'AUTH_FAILED'
+          error: 'Authentication failed',
+          code: 'AUTH_FAILED', 
+          message: 'Please sign in again',
+          details: authError?.message
         }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    // Verify the user ID matches the request
-    console.log('Comparing user IDs:', { jwtUserId: user.id, requestUserId: userId });
-    if (user.id !== userId) {
-      console.error('User ID mismatch: JWT user', user.id, 'vs request userId', userId);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Unauthorized: User ID mismatch',
-          code: 'USER_MISMATCH'
-        }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // DUPLICATE CHECKOUT PREVENTION: Check for recent checkout creation
-    // Use a global Map to track checkout requests (in-memory, per edge function instance)
-    const CHECKOUT_COOLDOWN = 5000; // 5 seconds cooldown between checkouts
-    const checkoutKey = `${userId}-${planId}-${billingPeriod}`;
-    const now = Date.now();
-    
-    // Simple in-memory rate limiting (will reset on edge function restart, but that's fine)
-    const recentCheckouts = (globalThis as any).__recentCheckouts || new Map();
-    (globalThis as any).__recentCheckouts = recentCheckouts;
-    
-    const lastCheckoutTime = recentCheckouts.get(checkoutKey);
-    if (lastCheckoutTime && (now - lastCheckoutTime) < CHECKOUT_COOLDOWN) {
-      console.warn('Duplicate checkout attempt detected within cooldown period');
-      return new Response(
-        JSON.stringify({ 
-          error: 'Please wait a moment before creating another checkout',
-          code: 'RATE_LIMITED'
-        }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Mark this checkout as in-progress
-    recentCheckouts.set(checkoutKey, now);
-    
-    // Clean up old entries (older than 1 minute)
-    for (const [key, time] of recentCheckouts.entries()) {
-      if (now - time > 60000) {
-        recentCheckouts.delete(key);
-      }
-    }
+    // Use user ID from JWT token
+    const userId = user.id;
+    console.log('Using user ID from JWT');
     
     // Get user data from Supabase (including subscription info)
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
     
-    console.log('Fetching user data for userId:', userId);
+    console.log('Fetching user data...');
 
     const { data: userData, error: userError } = await supabaseClient
       .from('users')
@@ -200,99 +223,30 @@ Deno.serve(async (req) => {
     }
     
     if (!userData) {
-      console.error('User data is null for userId:', userId);
+      console.error('User data is null');
       return new Response(
         JSON.stringify({ error: 'User not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    console.log('User found, email:', userData.email);
+    console.log('User found, ready for checkout');
 
-    // Normalize billing period (frontend sends 'annually', but we need 'annual')
-    const normalizedBillingPeriod = billingPeriod === 'annually' ? 'annual' : billingPeriod;
-    const normalizedCurrentBillingPeriod = (currentBillingPeriod || userData.subscription_billing_period || 'monthly') === 'annually' ? 'annual' : (currentBillingPeriod || userData.subscription_billing_period || 'monthly');
+    // Frontend already sends the correct planId (creator-monthly, creator-yearly)
+    // No need to concatenate with billing period
+    const productId = productIdMap[planId];
     
-    // Determine if this is a subscription change
-    const actualCurrentPlan = currentPlan || userData.plan || 'free';
-    const actualHasActiveSubscription = hasActiveSubscription !== undefined 
-      ? hasActiveSubscription 
-      : (userData.subscription_status === 'active' && userData.subscription_id);
-    
-    const isPlanChange = actualCurrentPlan !== planId;
-    const isBillingChange = normalizedCurrentBillingPeriod !== normalizedBillingPeriod && !isPlanChange;
-    const isUpgrade = (actualCurrentPlan === 'free' || actualCurrentPlan === 'starter') && planId === 'pro';
-    const isDowngrade = actualCurrentPlan === 'pro' && planId === 'starter';
-    
-    console.log('Plan change analysis:', {
-      currentPlan: actualCurrentPlan,
-      newPlan: planId,
-      currentBilling: normalizedCurrentBillingPeriod,
-      newBilling: normalizedBillingPeriod,
-      hasActiveSubscription: actualHasActiveSubscription,
-      isPlanChange,
-      isBillingChange,
-      isUpgrade,
-      isDowngrade
-    });
-
-    // Plan prices for prorating calculations
-    const planPrices: Record<string, Record<string, number>> = {
-      'starter': { 'monthly': 20, 'annual': 168 }, // 14 * 12
-      'pro': { 'monthly': 40, 'annual': 336 }, // 28 * 12
-    };
-
-    // Calculate prorated amount if user has active subscription
-    let proratedAmount = null;
-    let adjustmentNote = '';
-    
-    if (actualHasActiveSubscription && userData.subscription_ends_at && (isPlanChange || isBillingChange)) {
-      const now = new Date();
-      const endsAt = new Date(userData.subscription_ends_at);
-      const totalSeconds = (endsAt.getTime() - new Date(userData.subscription_started_at || now).getTime()) / 1000;
-      const remainingSeconds = (endsAt.getTime() - now.getTime()) / 1000;
-      const remainingRatio = remainingSeconds / totalSeconds;
-      
-      const currentPrice = planPrices[actualCurrentPlan]?.[normalizedCurrentBillingPeriod] || 0;
-      const newPrice = planPrices[planId]?.[normalizedBillingPeriod] || 0;
-      
-      // Calculate unused credit from current subscription
-      const unusedCredit = currentPrice * remainingRatio;
-      
-      // Calculate what user should pay
-      if (isUpgrade) {
-        // Upgrade: Pay difference for remaining period
-        proratedAmount = Math.max(0, (newPrice * remainingRatio) - unusedCredit);
-        adjustmentNote = `Upgrade: Paying prorated difference of $${proratedAmount.toFixed(2)} for remaining ${Math.ceil(remainingRatio * (normalizedBillingPeriod === 'annual' ? 12 : 1))} ${normalizedBillingPeriod === 'annual' ? 'months' : 'month'}`;
-      } else if (isDowngrade) {
-        // Downgrade: Credit unused amount, charge for new plan
-        proratedAmount = Math.max(0, (newPrice * remainingRatio) - unusedCredit);
-        adjustmentNote = `Downgrade: Credit of $${unusedCredit.toFixed(2)} applied, paying $${proratedAmount.toFixed(2)} for remaining period`;
-      } else if (isBillingChange) {
-        // Billing period change: Prorate based on remaining time
-        proratedAmount = Math.max(0, (newPrice * remainingRatio) - unusedCredit);
-        adjustmentNote = `Billing change: Adjusted payment of $${proratedAmount.toFixed(2)}`;
-      }
-      
-      console.log('Prorating calculation:', {
-        unusedCredit: unusedCredit.toFixed(2),
-        proratedAmount: proratedAmount?.toFixed(2),
-        remainingRatio: remainingRatio.toFixed(2),
-        adjustmentNote
-      });
-    }
-    
-    // Get product ID
-    const productKey = `${planId}-${normalizedBillingPeriod}`;
-    const productId = productIdMap[productKey];
-    
-    console.log('Billing period:', billingPeriod, '→ normalized:', normalizedBillingPeriod);
-    console.log('Product key:', productKey);
+    console.log('Plan ID received:', planId);
+    console.log('Product ID from mapping:', productId);
 
     if (!productId) {
-      console.error('Product ID not found for:', productKey);
+      console.error('Product ID not found for planId:', planId);
+      console.error('Available mappings:', Object.keys(productIdMap));
       return new Response(
-        JSON.stringify({ error: `Product not found for ${productKey}. Please configure product IDs in environment variables.` }),
+        JSON.stringify({ 
+          error: `Product not found for plan: ${planId}. Available plans: ${Object.keys(productIdMap).join(', ')}`,
+          details: 'Product environment variables not properly set'
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -310,7 +264,7 @@ Deno.serve(async (req) => {
     console.log('Calling DodoPayments API at:', dodoBaseUrl);
     
     // Prepare checkout payload
-    const checkoutPayload: any = {
+    const checkoutPayload = {
       product_cart: [
         {
           product_id: productId,
@@ -324,31 +278,11 @@ Deno.serve(async (req) => {
       metadata: {
         user_id: userId,
         plan_id: planId,
-        billing_period: normalizedBillingPeriod, // Use normalized value for consistency
-        current_plan: actualCurrentPlan,
-        current_billing_period: normalizedCurrentBillingPeriod,
-        is_plan_change: isPlanChange.toString(),
-        is_billing_change: isBillingChange.toString(),
-        is_upgrade: isUpgrade.toString(),
-        is_downgrade: isDowngrade.toString(),
+        billing_period: billingPeriod,
       },
     };
     
-    console.log('Checkout metadata:', checkoutPayload.metadata);
-    
-    // If user has active subscription, include subscription update info
-    if (actualHasActiveSubscription && userData.subscription_id) {
-      checkoutPayload.subscription_id = userData.subscription_id;
-      checkoutPayload.customer_id = userData.payment_customer_id;
-      
-      // Add prorating information if calculated
-      if (proratedAmount !== null) {
-        checkoutPayload.metadata.prorated_amount = proratedAmount.toFixed(2);
-        checkoutPayload.metadata.adjustment_note = adjustmentNote;
-        // Note: DodoPayments may handle prorating automatically, or you may need to
-        // adjust the product price. Check DodoPayments API docs for subscription update methods.
-      }
-    }
+    console.log('Checkout payload:', JSON.stringify(checkoutPayload, null, 2));
     
     // DodoPayments API endpoint: /checkouts (not /v1/checkout/sessions)
     const dodoResponse = await fetch(`${dodoBaseUrl}/checkouts`, {
@@ -359,6 +293,8 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify(checkoutPayload),
     });
+
+    console.log('DodoPayments response status:', dodoResponse.status);
 
     if (!dodoResponse.ok) {
       const errorText = await dodoResponse.text();
@@ -374,7 +310,7 @@ Deno.serve(async (req) => {
     }
 
     const checkoutData = await dodoResponse.json();
-    console.log('Checkout session created successfully');
+    console.log('Checkout session created successfully:', checkoutData);
 
     return new Response(
       JSON.stringify({
@@ -386,12 +322,18 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error in create-checkout function:', error);
+    console.error('=== ERROR IN CREATE-CHECKOUT ===');
+    console.error('Error message:', error.message);
+    console.error('Error name:', error.name);
     console.error('Error stack:', error.stack);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    
     return new Response(
       JSON.stringify({ 
         error: error.message || 'Internal server error',
-        type: error.name || 'UnknownError'
+        code: 'FUNCTION_ERROR',
+        type: error.name || 'UnknownError',
+        details: 'Check function logs for more information'
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

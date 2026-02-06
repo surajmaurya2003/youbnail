@@ -8,7 +8,7 @@
   <!-- Enhanced Security Headers -->
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="X-XSS-Protection" content="1; mode=block">
-  <meta http-equiv="X-Frame-Options" content="DENY">
+  <!-- X-Frame-Options must be set via HTTP header, not meta tag -->
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
   <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=(), payment=(), usb=()">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://d13nryxs46eypn.cloudfront.net https://fonts.googleapis.com https://*.neetoauth.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; media-src 'self' blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://d13nryxs46eypn.cloudfront.net https://*.neetoauth.com https://*.neetochat.com wss://*.neetodeployapp.com https://static.cloudflareinsights.com; frame-src 'none'; object-src 'none'; base-uri 'self';">
@@ -372,9 +372,6 @@
       pointer-events: none;
     }
     
-    .glow-text {
-      /* Removed neon/shining effect */
-    }
     
     .neon-border {
       border: 1px solid var(--accent-primary);
@@ -423,13 +420,18 @@
 <script>
   window.NeetoWidgetUserIdentity = {};
   window.addEventListener("load", () => {
-    // Only load chat widget on production domain
-    if (window.location.hostname === 'youbnail.com') {
+    // Load chat widget on both development and production
+    const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const isProduction = window.location.hostname === 'youbnail.com' || window.location.hostname === 'www.youbnail.com';
+    
+    if (isDevelopment || isProduction) {
       embedNeetoWidget({
         apiKey: "e7aTFwQ8pcN1otcv",
-        // Add domain restrictions and security settings
-        restrictDomains: ['youbnail.com', 'www.youbnail.com'],
-        enableHttpsOnly: true,
+        // Only restrict domains in production
+        ...(isProduction && {
+          restrictDomains: ['youbnail.com', 'www.youbnail.com'],
+          enableHttpsOnly: true,
+        })
       });
     }
   });

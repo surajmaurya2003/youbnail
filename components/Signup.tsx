@@ -16,7 +16,20 @@ export const Signup: React.FC = () => {
       await authService.signInWithGoogle();
       // Note: OAuth redirects, so we don't need to navigate manually
     } catch (err: any) {
-      setError(err.message || 'Failed to sign up with Google.');
+      // Provide user-friendly error messages for OAuth failures  
+      let errorMessage = 'Failed to sign up with Google.';
+      
+      if (err.message?.includes('popup') || err.message?.includes('cancelled')) {
+        errorMessage = 'Sign up was cancelled. Please try again.';
+      } else if (err.message?.includes('blocked')) {
+        errorMessage = 'Pop-up blocked. Please allow pop-ups and try again.';
+      } else if (err.message?.includes('network') || err.message?.includes('fetch')) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      } else if (err.message?.includes('Database error') || err.message?.includes('database')) {
+        errorMessage = 'Account creation error. Please try again or contact support.';
+      }
+      
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -46,7 +59,20 @@ export const Signup: React.FC = () => {
       setName('');
       setEmail('');
     } catch (err: any) {
-      setError(err.message || 'Failed to send magic link.');
+      // Provide user-friendly error messages
+      let errorMessage = 'Failed to send signup link.';
+      
+      if (err.message?.includes('email') && err.message?.includes('invalid')) {
+        errorMessage = 'Please enter a valid email address.';
+      } else if (err.message?.includes('rate') || err.message?.includes('limit')) {
+        errorMessage = 'Too many requests. Please wait a moment before trying again.';
+      } else if (err.message?.includes('network') || err.message?.includes('fetch')) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      } else if (err.message?.includes('Database error') || err.message?.includes('database')) {
+        errorMessage = 'There was an issue creating your account. Please try again or contact support.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

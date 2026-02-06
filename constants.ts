@@ -53,15 +53,15 @@ export interface Plan {
 
 export const PLANS: Plan[] = [
   {
-    id: 'starter',
-    name: 'Starter',
-    priceMonthly: 20,
-    priceAnnual: 14,
-    creditsMonthly: 30,
-    creditsAnnual: 360,
-    thumbnailsMonthly: 30,
-    thumbnailsAnnual: 360,
-    popular: false,
+    id: 'creator-monthly',
+    name: 'Creator Monthly',
+    priceMonthly: 25,
+    priceAnnual: 25,
+    creditsMonthly: 50,
+    creditsAnnual: 50,
+    thumbnailsMonthly: 50,
+    thumbnailsAnnual: 50,
+    popular: true,
     features: [
       { name: 'Prompt-to-Thumbnail Generation', included: true },
       { name: 'Reference Image Mode', included: true },
@@ -71,21 +71,21 @@ export const PLANS: Plan[] = [
       { name: 'Quick Theme Presets (8 themes)', included: true },
       { name: 'Style & Lighting Controls', included: true },
       { name: 'Gallery & History', included: true },
-      { name: 'Selective Region Editing', included: false },
-      { name: 'Priority Support', included: false },
-      { name: 'Early Access to New Features', included: false }
+      { name: 'Selective Region Editing', included: true },
+      { name: 'Priority Support', included: true },
+      { name: 'Early Access to New Features', included: true }
     ]
   },
   {
-    id: 'pro',
-    name: 'Pro',
-    priceMonthly: 40,
-    priceAnnual: 28,
-    creditsMonthly: 100,
-    creditsAnnual: 1200,
-    thumbnailsMonthly: 100,
-    thumbnailsAnnual: 1200,
-    popular: true,
+    id: 'creator-yearly',
+    name: 'Creator Yearly',
+    priceMonthly: 20.83,
+    priceAnnual: 20.83,
+    creditsMonthly: 600,
+    creditsAnnual: 600,
+    thumbnailsMonthly: 600,
+    thumbnailsAnnual: 600,
+    popular: false,
     features: [
       { name: 'Prompt-to-Thumbnail Generation', included: true },
       { name: 'Reference Image Mode', included: true },

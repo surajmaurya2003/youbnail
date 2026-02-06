@@ -1,5 +1,5 @@
 
-export type PlanTier = 'free' | 'starter' | 'pro';
+export type PlanTier = 'free' | 'starter' | 'creator-monthly' | 'creator-yearly';
 
 export interface UserProfile {
   id: string;
