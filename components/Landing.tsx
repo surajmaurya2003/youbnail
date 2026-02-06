@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CreatorPricing } from './ui/creator-pricing';
+import { HomepagePricing } from './ui/homepage-pricing';
 import { supabase } from '../lib/supabase';
 
 export const Landing: React.FC = () => {
@@ -1017,12 +1017,7 @@ export const Landing: React.FC = () => {
       </section>
 
       {/* 12. Pricing */}
-      <CreatorPricing 
-        onPlanSelect={(planId) => {
-          // Redirect to signup page when clicking pricing buttons on homepage
-          window.location.href = '/signup';
-        }}
-      />
+      <HomepagePricing />
 
       {/* 13. FAQ */}
       <section className="py-20 px-4" style={{background: 'var(--bg-secondary)'}}>
