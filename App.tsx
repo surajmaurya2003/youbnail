@@ -544,7 +544,40 @@ const AppWithToast: React.FC = () => {
     const currentPrompt = isPartialUpdate 
       ? (editPromptRef.current?.value || '') 
       : (promptRef1.current?.value || promptRef2.current?.value || prompt);
-    const baseImg = isPartialUpdate ? generatedThumb : refImage;
+    
+    let baseImg = isPartialUpdate ? generatedThumb : refImage;
+    
+    // Convert public URL to data URL for editing if necessary
+    if (isPartialUpdate && baseImg && !baseImg.startsWith('data:')) {
+      try {
+        console.log('Converting public URL to data URL for editing...');
+        setGenerationProgress(10); // Show some progress during conversion
+        baseImg = await convertImageToDataURL(baseImg);
+        
+        // Validate the converted data URL
+        if (!baseImg.startsWith('data:image/')) {
+          throw new Error('Invalid data URL format after conversion');
+        }
+        
+        console.log('Successfully converted to data URL');
+        setGenerationProgress(20); // Update progress after conversion
+      } catch (error) {
+        console.error('Failed to convert image for editing:', error);
+        
+        // Provide specific error messages based on error type
+        let errorMsg = 'Failed to prepare image for editing.';
+        if (error instanceof TypeError && error.message.includes('fetch')) {
+          errorMsg = 'Network error while preparing image for editing. Please check your connection.';
+        } else if (error.message.includes('CORS')) {
+          errorMsg = 'Image access restricted. Please try regenerating the thumbnail.';
+        }
+        
+        showError('Edit Error', errorMsg + ' Please try regenerating the thumbnail.');
+        setIsGenerating(false);
+        setGenerationProgress(0);
+        return;
+      }
+    }
 
     if (!currentPrompt && !baseImg) {
       showWarning('Missing Input', 'Please provide a description or a base image.');
@@ -637,6 +670,7 @@ const AppWithToast: React.FC = () => {
         console.log('Edit operation details:', {
           selectedArea,
           hasBaseImg: !!baseImg,
+          baseImgFormat: baseImg?.startsWith('data:') ? 'data URL' : 'public URL',
           prompt: currentPromptText,
           generatedThumbExists: !!generatedThumb
         });
@@ -815,6 +849,32 @@ const AppWithToast: React.FC = () => {
       showError('Generation Failed', errorMessage);
       setGenerationProgress(0);
       setIsGenerating(false);
+    }
+  };
+
+  // Convert image URL to data URL for editing
+  const convertImageToDataURL = async (imageUrl: string): Promise<string> => {
+    try {
+      // Handle CORS by using crossOrigin attribute
+      const response = await fetch(imageUrl, {
+        mode: 'cors',
+        credentials: 'omit'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Failed to read image data'));
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Failed to convert image to data URL:', error);
+      throw new Error('Failed to convert image for editing. Please try again.');
     }
   };
 
