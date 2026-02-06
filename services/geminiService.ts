@@ -89,20 +89,43 @@ export class ThumbnailAI {
         }
       });
 
+      // Enhanced error logging for debugging
       if (error) {
+        console.error('Supabase function error:', error);
+        
         // Handle rate limiting errors
         if (error.message?.includes('Rate limit') || error.message?.includes('429')) {
           throw new Error('Rate limit exceeded. Please wait a moment before trying again.');
         }
+        
+        // Handle API key errors
+        if (error.message?.includes('API key') || error.message?.includes('GEMINI_API_KEY')) {
+          throw new Error('API configuration issue. Please contact support.');
+        }
+        
+        // Handle authentication errors
+        if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+          throw new Error('Authentication failed. Please sign out and sign in again.');
+        }
+        
         throw new Error(error.message || 'Failed to generate thumbnail');
       }
 
       if (!data?.image) {
+        console.error('No image data returned from API:', data);
         throw new Error('No image data returned from server');
       }
 
       return data.image;
     } catch (error: any) {
+      console.error('ThumbnailAI generation error:', {
+        message: error.message,
+        prompt: basePrompt?.substring(0, 100) + '...',
+        hasReferenceImage: !!referenceImage,
+        hasSelection: !!selection,
+        options
+      });
+      
       // Handle specific error types
       if (error.message?.includes('timeout') || error.message?.includes('Timeout')) {
         throw new Error('Generation timed out. Please try again with a simpler prompt.');

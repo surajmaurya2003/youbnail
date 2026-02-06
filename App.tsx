@@ -523,7 +523,17 @@ const AppWithToast: React.FC = () => {
     }
 
     // For Creator plans, all users have access to all features including selective editing
-    // No restrictions for Creator plan users
+    // Validate that we have a selection area when doing partial updates (edits)
+    if (isPartialUpdate && !selectedArea) {
+      showWarning('No Selection Made', 'Please select an area on the thumbnail to edit before clicking Generate.');
+      return;
+    }
+
+    // Validate that we have a generated thumbnail when doing edits
+    if (isPartialUpdate && !generatedThumb) {
+      showWarning('No Thumbnail to Edit', 'Please generate a thumbnail first before trying to edit it.');
+      return;
+    }
 
     if (user.credits <= 0) {
       showError('Out of Credits', "You've run out of credits! Please upgrade your plan.");
@@ -621,6 +631,28 @@ const AppWithToast: React.FC = () => {
         ...options,
         overlayText: overlayTextValue
       };
+
+      // Debug logging for edit operations
+      if (isPartialUpdate) {
+        console.log('Edit operation details:', {
+          selectedArea,
+          hasBaseImg: !!baseImg,
+          prompt: currentPromptText,
+          generatedThumbExists: !!generatedThumb
+        });
+        
+        if (!selectedArea) {
+          showError('Edit Error', 'No selection area found. Please select an area on the thumbnail first.');
+          setIsGenerating(false);
+          return;
+        }
+        
+        if (!baseImg) {
+          showError('Edit Error', 'No base image found. Please generate a thumbnail first before editing.');
+          setIsGenerating(false);
+          return;
+        }
+      }
       
       // Start AI generation - this is where progress should be tracked
       const result = await ThumbnailAI.generateThumbnail(

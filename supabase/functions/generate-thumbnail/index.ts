@@ -470,6 +470,18 @@ Deno.serve(async (req) => {
     const selection = requestBody.selection;
     const options = requestBody.options || {};
 
+    // Validate selection area if provided
+    if (selection) {
+      if (typeof selection.x !== 'number' || typeof selection.y !== 'number' ||
+          typeof selection.width !== 'number' || typeof selection.height !== 'number' ||
+          selection.width <= 0 || selection.height <= 0) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid selection area. Must have valid x, y, width, and height.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // Validate reference image if provided
     if (referenceImage) {
       const imageValidation = validateImage(referenceImage);
@@ -586,6 +598,11 @@ Deno.serve(async (req) => {
 
   } catch (error: any) {
     console.error('Error in generate-thumbnail function:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     
     // Handle specific errors
     let statusCode = 500;
@@ -597,9 +614,12 @@ Deno.serve(async (req) => {
     } else if (error.message?.includes('quota') || error.message?.includes('limit')) {
       statusCode = 429;
       errorMessage = 'API quota exceeded. Please try again later.';
-    } else if (error.message?.includes('API key')) {
+    } else if (error.message?.includes('API key') || error.message?.includes('GEMINI_API_KEY')) {
       statusCode = 500;
-      errorMessage = 'API configuration issue. Please contact support.';
+      errorMessage = 'API configuration issue. Please check GEMINI_API_KEY environment variable.';
+    } else if (error.message?.includes('fetch')) {
+      statusCode = 500;
+      errorMessage = 'Network error calling AI service. Please try again.';
     } else if (error.message) {
       errorMessage = error.message;
     }
@@ -607,7 +627,8 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: errorMessage,
-        success: false
+        success: false,
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
       }),
       { 
         status: statusCode, 
