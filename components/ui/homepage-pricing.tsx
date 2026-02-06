@@ -107,7 +107,7 @@ export function HomepagePricing() {
 					
 					{/* Popular badge */}
 					<div className="absolute -top-3 left-1/2 -translate-x-1/2">
-						<Badge variant="default" className="bg-red-600 text-white px-4 py-1 text-xs font-semibold">
+						<Badge variant="default" style={{backgroundColor: '#ef4444', color: 'white', padding: '4px 16px', fontSize: '12px', fontWeight: '600'}}>
 							🔥 Best Value Deal
 						</Badge>
 					</div>
