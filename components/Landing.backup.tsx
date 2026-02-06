@@ -29,7 +29,7 @@ export const Landing: React.FC = () => {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <img 
-              src="https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/1.png" 
+              src="https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/website/1.png" 
               alt="Youbnail" 
               className="h-10"
             />
@@ -357,7 +357,7 @@ export const Landing: React.FC = () => {
             {/* Brand */}
             <div>
               <img 
-                src="https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/internal/1.png" 
+                src="https://ohbrdgolasejewtcbojt.supabase.co/storage/v1/object/public/website/1.png" 
                 alt="Youbnail" 
                 className="h-10 mb-4"
               />
