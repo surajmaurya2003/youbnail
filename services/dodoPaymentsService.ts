@@ -23,7 +23,7 @@ export async function createCheckoutSession(
   params: CreateCheckoutParams
 ): Promise<CheckoutSession> {
   const apiKey = Deno.env.get('DODO_API_KEY') || '';
-  const appUrl = Deno.env.get('APP_URL') || 'http://localhost:3000';
+  const appUrl = Deno.env.get('APP_URL') || 'https://youbnail.com';
 
   // Map plan and billing period to product ID
   const productIdMap: Record<string, string> = {
