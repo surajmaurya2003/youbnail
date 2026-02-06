@@ -1,3 +1,12 @@
+---
+name: youbnail-ai-thumbnail-generator
+description: AI-powered YouTube thumbnail generator that creates compelling thumbnails from video content, text prompts, or uploaded images. Use when users need to "create YouTube thumbnails", "generate video thumbnails", "design thumbnails", or "make video covers".
+license: MIT
+metadata:
+  author: surajmaurya2003
+  version: "1.0.0"
+---
+
 # AI YouTube Thumbnail Generator
 
 An intelligent YouTube thumbnail maker that uses AI to create compelling thumbnails from video content, text prompts, or uploaded images.
