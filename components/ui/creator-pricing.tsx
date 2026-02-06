@@ -126,12 +126,17 @@ export function CreatorPricing({ user, isUpdatingPlan, setIsUpdatingPlan, onPlan
 			showSuccess('Subscription Cancelled', 'Your subscription has been cancelled successfully');
 			setShowCancelModal(false);
 			
-			// Wait a moment then proceed with the new plan
+			// Refresh the page to show updated subscription state
+			setTimeout(() => {
+				window.location.reload();
+			}, 1500);
+			
+			// Wait a moment then proceed with the new plan (after page refresh)
 			setTimeout(() => {
 				if (selectedPlan) {
 					handlePlanClick(selectedPlan.id, selectedPlan.price, selectedPlan.billingPeriod);
 				}
-			}, 1000);
+			}, 2000);
 
 		} catch (error: any) {
 			console.error('Cancellation error:', error);

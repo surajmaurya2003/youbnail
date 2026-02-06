@@ -1017,7 +1017,12 @@ export const Landing: React.FC = () => {
       </section>
 
       {/* 12. Pricing */}
-      <CreatorPricing />
+      <CreatorPricing 
+        onPlanSelect={(planId) => {
+          // Redirect to signup page when clicking pricing buttons on homepage
+          window.location.href = '/signup';
+        }}
+      />
 
       {/* 13. FAQ */}
       <section className="py-20 px-4" style={{background: 'var(--bg-secondary)'}}>
