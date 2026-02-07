@@ -62,16 +62,36 @@ export const VideoSnapshot: React.FC<VideoSnapshotProps> = ({ onCapture }) => {
       `https://img.youtube.com/vi/${id}/3.jpg`
     ];
     const valid: string[] = [];
-    await Promise.all(candidates.map(url => new Promise<void>((resolve) => {
-      const img = new Image();
-      img.onload = () => { valid.push(url); resolve(); };
-      img.onerror = () => resolve();
-      img.src = url;
-    })));
+    
+    // Test each thumbnail URL for availability
+    await Promise.allSettled(candidates.map(async (url) => {
+      try {
+        const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+        // For no-cors mode, we assume it's valid if no error thrown
+        // We'll test loading with Image element as backup
+        const img = new Image();
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => {
+            // Check if it's not the default "no thumbnail" image (120x90 pixels)
+            if (img.width > 120 && img.height > 90) {
+              valid.push(url);
+            }
+            resolve();
+          };
+          img.onerror = () => resolve(); // Don't add to valid list
+          img.src = url;
+        });
+      } catch (error) {
+        // URL not accessible, skip it
+        console.debug(`Thumbnail ${url} not available:`, error);
+      }
+    }));
+
     if (valid.length === 0) {
-      setThumbsError('Could not fetch thumbnails for this YouTube link.');
+      setThumbsError('Could not fetch thumbnails for this YouTube video. This might be due to privacy settings or the video being unavailable.');
+    } else {
+      setYoutubeThumbs(valid);
     }
-    setYoutubeThumbs(valid);
     setThumbsLoading(false);
   };
 
@@ -218,8 +238,30 @@ export const VideoSnapshot: React.FC<VideoSnapshotProps> = ({ onCapture }) => {
               <div className="text-sm font-medium mb-3" style={{color: 'var(--text-secondary)'}}>Select a thumbnail to use</div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {youtubeThumbs.map((url) => (
-                  <button key={url} className="rounded-lg overflow-hidden border card-hover" style={{borderColor: 'var(--border-primary)'}} onClick={() => onCapture(url)}>
-                    <img src={url} className="w-full h-28 object-cover" />
+                  <button 
+                    key={url} 
+                    className="rounded-lg overflow-hidden border card-hover group relative" 
+                    style={{borderColor: 'var(--border-primary)'}} 
+                    onClick={() => {
+                      console.log('Thumbnail selected:', url);
+                      onCapture(url);
+                    }}
+                  >
+                    <img 
+                      src={url} 
+                      className="w-full h-28 object-cover group-hover:scale-105 transition-transform duration-200" 
+                      onError={(e) => {
+                        console.error('Thumbnail image failed to load:', url);
+                        // Hide the failed thumbnail
+                        (e.target as HTMLElement).closest('button')?.style.setProperty('display', 'none');
+                      }}
+                      alt="YouTube thumbnail"
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                      </svg>
+                    </div>
                   </button>
                 ))}
               </div>
