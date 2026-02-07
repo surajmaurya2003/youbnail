@@ -1191,88 +1191,10 @@ const AppWithToast: React.FC = () => {
     switch (mode) {
       case CreationMode.VIDEO:
         return (
-          <VideoSnapshot onCapture={async (img) => { 
-            // If it's a URL (like YouTube thumbnail), convert to base64
-            if (img.startsWith('http')) {
-              try {
-                // First try: Canvas with crossOrigin for better compatibility
-                const image = new Image();
-                image.crossOrigin = 'anonymous';
-                
-                const imageLoadPromise = new Promise<string>((resolve, reject) => {
-                  image.onload = () => {
-                    try {
-                      const canvas = document.createElement('canvas');
-                      const ctx = canvas.getContext('2d');
-                      if (!ctx) {
-                        reject(new Error('Canvas context not available'));
-                        return;
-                      }
-                      
-                      canvas.width = image.width;
-                      canvas.height = image.height;
-                      ctx.drawImage(image, 0, 0);
-                      
-                      const base64 = canvas.toDataURL('image/jpeg', 0.9);
-                      resolve(base64);
-                    } catch (canvasError) {
-                      reject(canvasError);
-                    }
-                  };
-                  
-                  image.onerror = () => {
-                    reject(new Error('Failed to load image'));
-                  };
-                });
-                
-                image.src = img;
-                const base64Result = await imageLoadPromise;
-                setRefImage(base64Result);
-                setMode(CreationMode.REFERENCE);
-                
-              } catch (canvasError) {
-                console.warn('Canvas method failed, trying proxy:', canvasError);
-                
-                // Second try: Use server-side proxy for CORS issues
-                try {
-                  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/image-proxy`, {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-                    },
-                    body: JSON.stringify({ imageUrl: img })
-                  });
-
-                  if (!response.ok) {
-                    throw new Error('Proxy request failed');
-                  }
-
-                  const data = await response.json();
-                  if (data.error) {
-                    throw new Error(data.error);
-                  }
-
-                  setRefImage(data.base64);
-                  setMode(CreationMode.REFERENCE);
-                  
-                } catch (proxyError) {
-                  console.error('Both canvas and proxy methods failed:', proxyError);
-                  // Final fallback: use URL directly with warning
-                  try {
-                    setRefImage(img);
-                    setMode(CreationMode.REFERENCE);
-                    showWarningModal('Image Processing', 'Using direct URL as fallback. Some features may be limited.');
-                  } catch (fallbackError) {
-                    showErrorModal('Image Load Error', 'Failed to load the selected thumbnail. Please try a different one or upload a local image instead.');
-                  }
-                }
-              }
-            } else {
-              // It's already base64
-              setRefImage(img);
-              setMode(CreationMode.REFERENCE);
-            }
+          <VideoSnapshot onCapture={(img) => { 
+            // VideoSnapshot now only returns base64 data from captured frames
+            setRefImage(img);
+            setMode(CreationMode.REFERENCE);
           }} />
         );
       case CreationMode.REFERENCE:

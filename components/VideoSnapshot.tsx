@@ -10,10 +10,6 @@ interface VideoSnapshotProps {
 
 export const VideoSnapshot: React.FC<VideoSnapshotProps> = ({ onCapture }) => {
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
-  const [videoLink, setVideoLink] = useState<string>('');
-  const [youtubeThumbs, setYoutubeThumbs] = useState<string[]>([]);
-  const [thumbsLoading, setThumbsLoading] = useState<boolean>(false);
-  const [thumbsError, setThumbsError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -28,72 +24,7 @@ export const VideoSnapshot: React.FC<VideoSnapshotProps> = ({ onCapture }) => {
     }
   };
 
-  const parseYouTubeId = (url: string): string | null => {
-    try {
-      const u = new URL(url);
-      if (u.hostname.includes('youtu.be')) {
-        return u.pathname.split('/')[1] || null;
-      }
-      if (u.hostname.includes('youtube.com')) {
-        if (u.pathname.startsWith('/watch')) {
-          return u.searchParams.get('v');
-        }
-        const parts = u.pathname.split('/').filter(Boolean);
-        // /shorts/{id}, /embed/{id}
-        if (parts[0] === 'shorts' || parts[0] === 'embed') {
-          return parts[1] || null;
-        }
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  };
 
-  const loadYouTubeThumbnails = async (id: string) => {
-    setThumbsLoading(true);
-    setThumbsError(null);
-    const candidates = [
-      `https://img.youtube.com/vi/${id}/maxresdefault.jpg`,
-      `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
-      `https://img.youtube.com/vi/${id}/0.jpg`,
-      `https://img.youtube.com/vi/${id}/1.jpg`,
-      `https://img.youtube.com/vi/${id}/2.jpg`,
-      `https://img.youtube.com/vi/${id}/3.jpg`
-    ];
-    const valid: string[] = [];
-    
-    // Test each thumbnail URL for availability
-    await Promise.allSettled(candidates.map(async (url) => {
-      try {
-        const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
-        // For no-cors mode, we assume it's valid if no error thrown
-        // We'll test loading with Image element as backup
-        const img = new Image();
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => {
-            // Check if it's not the default "no thumbnail" image (120x90 pixels)
-            if (img.width > 120 && img.height > 90) {
-              valid.push(url);
-            }
-            resolve();
-          };
-          img.onerror = () => resolve(); // Don't add to valid list
-          img.src = url;
-        });
-      } catch (error) {
-        // URL not accessible, skip it
-        console.debug(`Thumbnail ${url} not available:`, error);
-      }
-    }));
-
-    if (valid.length === 0) {
-      setThumbsError('Could not fetch thumbnails for this YouTube video. This might be due to privacy settings or the video being unavailable.');
-    } else {
-      setYoutubeThumbs(valid);
-    }
-    setThumbsLoading(false);
-  };
 
   const captureFrame = () => {
     const video = videoRef.current;
@@ -187,89 +118,10 @@ export const VideoSnapshot: React.FC<VideoSnapshotProps> = ({ onCapture }) => {
               Drop your video here, or click to browse
             </div>
             <div className="text-sm" style={{color: 'var(--text-muted)'}}>
-              Supports MP4, MOV, AVI (Max 100MB)
+              Supports MP4, MOV, AVI, WebM (Max 100MB)
             </div>
           </label>
-          <div className="mt-6 w-full max-w-md mx-auto">
-            <label className="block text-sm font-medium mb-2" style={{color: 'var(--text-secondary)'}}>Or paste a video URL</label>
-            <div className="flex gap-2">
-              <input 
-                type="url" 
-                value={videoLink} 
-                onChange={(e) => setVideoLink(e.target.value)} 
-                placeholder="https://example.com/video.mp4" 
-                className="input-field flex-1"
-              />
-              <button 
-                className="btn-secondary"
-                onClick={() => {
-                  if (!videoLink) return;
-                  try {
-                    const ytId = parseYouTubeId(videoLink);
-                    if (ytId) {
-                      loadYouTubeThumbnails(ytId);
-                      setVideoSrc(null);
-                    } else {
-                      const url = new URL(videoLink);
-                      // Load direct video URLs that the browser can play
-                      setVideoSrc(url.toString());
-                      setYoutubeThumbs([]);
-                    }
-                  } catch {
-                    showAlert('Invalid URL', 'Please enter a valid direct video or YouTube URL.', 'warning');
-                  }
-                }}
-              >
-                Load
-              </button>
-            </div>
-            <div className="text-xs mt-2" style={{color: 'var(--text-muted)'}}>
-              Direct MP4/MOV URLs or YouTube links (we use official thumbnails).
-            </div>
-          </div>
-          {thumbsLoading && (
-            <div className="mt-4 text-sm text-center" style={{color: 'var(--text-secondary)'}}>Fetching YouTube thumbnails…</div>
-          )}
-          {thumbsError && (
-            <div className="mt-4 text-sm text-center" style={{color: 'var(--accent-primary)'}}>{thumbsError}</div>
-          )}
-          {youtubeThumbs.length > 0 && (
-            <div className="mt-6">
-              <div className="text-sm font-medium mb-3" style={{color: 'var(--text-secondary)'}}>Select a thumbnail to use</div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {youtubeThumbs.map((url) => (
-                  <button 
-                    key={url} 
-                    className="rounded-lg overflow-hidden border card-hover group relative" 
-                    style={{borderColor: 'var(--border-primary)'}} 
-                    onClick={() => {
-                      console.log('Thumbnail selected:', url);
-                      onCapture(url);
-                    }}
-                  >
-                    <img 
-                      src={url} 
-                      className="w-full h-28 object-cover group-hover:scale-105 transition-transform duration-200" 
-                      onError={(e) => {
-                        console.error('Thumbnail image failed to load:', url);
-                        // Hide the failed thumbnail
-                        (e.target as HTMLElement).closest('button')?.style.setProperty('display', 'none');
-                      }}
-                      alt="YouTube thumbnail"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 flex items-center justify-center">
-                      <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              <div className="mt-4 flex justify-end">
-                <button className="btn-secondary" onClick={() => { setYoutubeThumbs([]); setThumbsError(null); }}>Clear</button>
-              </div>
-            </div>
-          )}
+
         </div>
       ) : (
         <div className="space-y-4">

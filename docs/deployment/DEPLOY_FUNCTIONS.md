@@ -46,9 +46,6 @@ supabase functions deploy dodo-webhook --no-verify-jwt
 
 # Deploy cancel-subscription function
 supabase functions deploy cancel-subscription --no-verify-jwt
-
-# Deploy image-proxy function (for YouTube thumbnail CORS handling)
-supabase functions deploy image-proxy --no-verify-jwt
 ```
 
 **Expected output:**
